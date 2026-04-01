@@ -161,6 +161,7 @@ a {
   padding: 5px 10px;
   font-size: 14px;
   border-radius: 20px;
+  cursor: pointer;
   border: none;
   outline: none;
   color: white;
@@ -179,11 +180,21 @@ a {
   width: 55%;
   padding-left: 10px;
 }
-.PlaylistPlayButton {
+.song-details {
+  display: inline-block;
+  position: absolute;
+}
+.song-details h3 {
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
+.PlayButton {
   bottom: 10px;
   padding: 5px 10px;
   font-size: 14px;
   border-radius: 20px;
+  cursor: pointer;
   border: none;
   outline: none;
   color: white;
@@ -197,6 +208,7 @@ a {
   font-size: 16px;
   width: calc(100% - 10px);
   border-radius: 30px;
+  cursor: pointer;
   border: none;
   outline: none;
   color: white;

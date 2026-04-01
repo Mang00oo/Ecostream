@@ -30,6 +30,7 @@ function App() {
   const [nowPlaying, setNowPlaying] = useState({});
   const [useAutoPlay, setUseAutoPlay] = useState(false);
   const [libraryItems, setLibraryItems] = useState([]);
+  const [openPlaylist, setOpenPlaylist] = useState(null);
 
   const player = createRef();
 
@@ -82,6 +83,13 @@ function App() {
     })
     getNowPlaying();
   }
+  const playSong = (_song) => {
+    setUseAutoPlay(true);
+    console.log(_song);
+    axios.get(SERVER_API_URL + 'api/control_queue', { params: { action: 'play', song: _song } }).then((data) => {
+      setNowPlaying(data.data);
+    });
+  }
 
   const backgroundStyle = {
     position: 'fixed',
@@ -104,7 +112,7 @@ function App() {
     setSearchQuery(event.target.value);
   };
 
-  async function apiCall2() {
+  async function search() {
     setListItems([]);
     setCenterContent('search');
     const tracks = await lastfm.searchLastFM(searchQuery);
@@ -115,12 +123,16 @@ function App() {
       const _songName = track.name;
       const _artistName = track.artist;
       const _mbid = track.mbid;
+      let _albumMbid = null;
       let _imageUrl = 'https://placehold.co/300x300?text=No+Image'
       if (info && info.album && info.album.image && info.album.image[2] && info.album.image[2]['#text']) {
         _imageUrl = info.album.image[3]['#text'];
       }
+      if (info && info.album && info.album.mbid) {
+        _albumMbid = info.album.mbid;
+      }
       const _songUrl = track.url;
-      return ListItemCreator.CreateSearchItem(_songName, _artistName, _imageUrl, _songUrl, _mbid);
+      return ListItemCreator.CreateSearchItem(_songName, _artistName, _imageUrl, _songUrl, _mbid, _albumMbid);
     });
 
     setListItems(items);
@@ -128,8 +140,13 @@ function App() {
 
   async function handleLibraryClick(playlist) {
     setListItems([]);
+    setOpenPlaylist(playlist);
     setCenterContent('playlist');
     const songs = playlist.songs;
+    const items = songs.map((song) => {
+      return ListItemCreator.CreateSongItem(song, playSong);
+    });
+    setListItems(items);
     console.log(songs);
   }
   function handleCenterCloseClick() {
@@ -146,7 +163,7 @@ function App() {
             placeholder="Search library..."
             onChange={handleInputChange}
           />
-          <button onClick={apiCall2}>Search</button>
+          <button onClick={search}>Search</button>
         </div>
         
         <Group className="grid">
@@ -168,11 +185,11 @@ function App() {
                 {centerContent === 'search' && (listItems.length > 0 ? listItems : <p> Searching... </p>)}
                 {centerContent != 'playlist' || (
                   <>
-                    <img className="playlist-image" src={'http://localhost:8080/media/'+nowPlaying.artworkPath} alt="Playlist cover" />
+                    <img className="playlist-image" src={openPlaylist.artworkPath ? 'http://localhost:8080/media/' + openPlaylist.artworkPath : 'https://placehold.co/300x300?text=' + openPlaylist.name} alt="Playlist cover" />
                     <div className="playlist-details">
-                      <h3> {'New Playlist'} </h3>
-                      <p> {'100 songs'} </p>
-                      <button className="PlaylistPlayButton"> Play </button>
+                      <h3> {openPlaylist.name} </h3>
+                      <p> {openPlaylist.songs.length} songs </p>
+                      <button className="PlayButton"> Play </button>
                     </div>
                     {listItems.length > 0 ? listItems : <p> No songs in this playlist yet. Try adding some! </p>}
                   </>

@@ -1,10 +1,11 @@
 import axios from 'axios';
-export function CreateSearchItem(songName, artistName, imageUrl, songUrl, _mbid) {
+export function CreateSearchItem(songName, artistName, imageUrl, songUrl, _mbid, _albumMbid) {
   const artistUrl = songUrl.substring(0, songUrl.lastIndexOf('/_/'));
   function handleClick() {
-    axios.get('http://localhost:8080/api/download', { params: { title: songName, artist: artistName, artworkUrl: imageUrl, mbid: _mbid } }).then((data) => {
+    const response = axios.get('http://localhost:8080/api/download', { params: { title: songName, artist: artistName, artworkUrl: imageUrl, mbid: _mbid } }).then((data) => {
       console.log(data);
     });
+    console.log(response);
   }
   return (
     <div className="search-item">
@@ -29,4 +30,20 @@ export function CreateLibraryItem(playlist, callback) {
       <p> {songCount} songs</p>
     </div>
   )
+}
+
+export function CreateSongItem(song, playCallback) {
+  function handleClick() {
+    playCallback(song);
+  }
+  return (
+    <div className="search-item">
+      <img src={'http://localhost:8080/media/'+song.artworkPath} onerror="this.onerror=null; this.src='https://placehold.co/300x300?text=No+Image';" alt="Song Image"></img>
+      <div className="song-details">
+        <h3 className="SongName" > {song.title} </h3>
+        <h4 className="ArtistName"> {song.artist} </h4>
+        <button className="PlayButton" onClick={handleClick}> Play </button>
+      </div>
+    </div>
+  );
 }
