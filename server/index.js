@@ -68,27 +68,6 @@ app.get('/api/control_queue', async (req, res) => {
       const nowPlaying = user.queue[user.posInQueue];
       res.send(nowPlaying);
 });
-let currentPlayerIp = null;
-app.get('/api/set_seek_pos', async (req, res) => {
-      if (request.query.ip === currentPlayerIp) {
-            const pos = req.query.pos; // in seconds
-            await User.findOneAndUpdate({ username: 'test_user' }, { posInSong: pos });
-            res.send('Seek position updated'); 
-      }
-});
-app.get('/api/get_seek_pos', async (req, res) => {
-      const user = await User.findOne({ username: 'test_user' });
-      if (!user) {
-            res.status(404).send('User not found');
-            return;
-      }
-      res.send(user.posInSong);
-});
-app.get('/api/set_player_ip', async (req, res) => {
-      const ip = req.query.ip;
-      currentPlayerIp = ip;
-      res.send('Player IP updated');
-});
 
 app.get('/api/get_now_playing', async (req, res) => { 
       const song = await User.findOne({ username: 'test_user' }).populate('queue').exec().then(user => {
@@ -103,6 +82,25 @@ app.get('/api/get_now_playing', async (req, res) => {
             res.status(500).send('Internal server error');
       });
 })
+app.get('/api/get_library', async (req, res) => {
+      const user = await User.findOne({ username: 'test_user' }).populate('playlists').exec();
+      if (!user) {
+            res.status(404).send('User not found');
+            return;
+      }
+      res.send(user.playlists);
+});
+app.get('/api/create_playlist', async (req, res) => {
+      const name = req.query.name;
+      const newPlaylist = new Playlist({
+            name: name,
+            songs: [],
+            artworkPath: ''
+      });
+      await newPlaylist.save();
+      await User.findOneAndUpdate({ username: 'test_user' }, { $push: { playlists: newPlaylist._id } });
+      res.send('Playlist created');
+});
 
 app.get('/', async (req, res) => {
       res.send('Hello from Ecostream!');
@@ -112,7 +110,6 @@ app.get('/', async (req, res) => {
       //});
 });
 
-// Trigger a download by visiting: /api/download?url=<youtube_url>
 app.get('/api/download', async (req, res) => {
       res.send('Downloading');
       // Get song data
@@ -126,6 +123,7 @@ app.get('/api/download', async (req, res) => {
       console.log('Searching: ' + searchQuery);
       const results = await muse.search(searchQuery);
       console.log('Found: ' + results.top_result.title);
+      console.log(results.top_result);
       const _duration = results.top_result.duration;
 
       // Download artwork
@@ -158,6 +156,8 @@ app.get('/api/download', async (req, res) => {
             artworkPath: path.join(`${mbid}.jpg`)
       });
       await newSong.save();
+
+      console.log('Download complete: ' + title + ' by ' + artist);
 });
 
 app.listen(PORT, () => {

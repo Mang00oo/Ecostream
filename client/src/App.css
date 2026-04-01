@@ -8,6 +8,13 @@
   display: flex;
   justify-content: center;
   align-items: center;
+
+  border-radius: 10px;
+  padding: 10px;
+  margin: 5px;
+  color: white;
+  background-color: rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(18px);
 }
 .top-bar input {
   width: 60%;
@@ -37,135 +44,162 @@
   left: 0;
 }
 
-.main-container {
-  display: grid;
-  grid-template-areas:
-    "header header header"
-    "library content now-playing"
-    "footer footer footer";
-  grid-template-columns: 1fr, 3fr, 2fr;
-  gap: 10px;
-  padding: 10px;
+.grid {
+  padding: 0px;
+  min-height: calc(100vh - 170px);
+  max-height: calc(100vh - 170px);
 }
 
-.main-container div {
+.panel {
   border-radius: 10px;
   padding: 10px;
+  margin: 5px;
   color: white;
   background-color: rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(18px);
+  overflow-y: scroll;
 }
 
-.main-container div.top-bar {
-  grid-area: header;
-  min-height: 0.2vh;
+.panel h2 {
+  margin-top: 4px;
+  margin-left: 7px;
 }
 
-.main-container div.library {
-  grid-area:library;
-  min-height: 75vh;
-  padding: 15px;
-  max-height: 75vh;
-  overflow: scroll;
-}
-.main-container div.library h2 {
-  margin-top: 2px;
-}
-.main-container div.library div.library-item {
-  position: relative;
-  margin-bottom: 10px;
-  background-color: rgba(255, 255, 255, 0.3);
-}
-.main-container div.library div.library-item img {
+.now-playing-image {
+  width: 100%;
   border-radius: 10px;
-  min-width:20%;
-  display:inline-flex;
-  max-width: 10vh;
+}
+a {
+  color: white;
+  text-decoration: none;
+  font-size: 18px;
+}
+
+.library-item {
+  width: calc(100% - 30px);
+  align-items: left;
+
+  padding: 10px;
+  margin: 0px;
+  border-radius: 10px;
+  margin: 5px;
+  color: white;
+  background-color: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+}
+.library-item img {
+  height: 100%;
+  max-height: 80px;
+  border-radius: 10px;
   margin-right: 10px;
+  float: left;
 }
-.main-container div.library div.library-item h2 {
-  margin-top: 2px;
+.library-item h3 {
+  top: 0px;
+  padding-top: 0px;
+  margin-top: 6px;
+  margin-bottom: 14px;
 }
-.main-container div.library div.library-item a {
-  color: white;
-  text-decoration: none;
-  position:absolute;
-  font-weight: bold;
-}
-.main-container div.library div.library-item p {
-  display: inline;
-  position: absolute;
-  padding-top:10px;
-}
-
-.main-container div.center-window {
-  grid-area:content;
-  padding: 15px;
-  max-height: 75vh;
-  overflow: scroll;
-}
-.main-container div.center-window h2 {
-  margin-top: 2px;
+.library-item p {
+  font-size: 14px;
+  margin-top: 5px;
+  margin-bottom: 20px;
+  color: rgba(255, 255, 255, 0.7);
 }
 
-.main-container div.center-window div.search-item {
-  position: relative;
-  margin-bottom: 10px;
-}
-.main-container div.center-window div.search-item img {
+.search-item {
+  width: calc(100% - 30px);
+  align-items: left;
+  padding: 10px;
+  padding-bottom: 4px;
+  margin: 0px;
   border-radius: 10px;
-  min-width:20%;
-  display:inline-flex;
-  max-width: 10vh;
+  margin: 5px;
+  color: white;
+  background-color: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+.search-item img {
+  height: 100%;
+  max-height: 80px;
+  border-radius: 10px;
   margin-right: 10px;
+  display: inline-block;
 }
-.main-container div.center-window div.search-item {
+.search-item a {
+  margin-top: 0px;
+  margin-bottom: 20px;
+  position: absolute;
+  color: white;
+}
+.search-item a.SongName {
+  font-size: 22px;
+}
+.search-item a.ArtistName {
+  top: 40px;
+  margin-bottom: 5px;
+  font-size: 16px;
+}
+.search-item button {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  padding: 5px 10px;
+  font-size: 14px;
+  border-radius: 20px;
+  border: none;
+  outline: none;
+  color: white;
   background-color: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
 }
-.main-container div.center-window div.search-item h2 {
-  margin-top: 2px;
-}
-.main-container div.center-window div.search-item a.SongName {
+.CenterCloseButton {
+  position: absolute;
+  right: 20px;
+  top: 20px;
+  padding: 5px 10px;
+  font-size: 14px;
+  border-radius: 20px;
+  border: none;
+  outline: none;
   color: white;
-  text-decoration: none;
-  display: inline;
-  position: absolute;
-  padding-top:8px;
-  font-size:20px;
-  font-weight: bold;
-}
-.main-container div.center-window div.search-item a.ArtistName {
-  color: white;
-  text-decoration: none;
-  display: inline;
-  position: absolute;
-  padding-top:45px;
-}
-.main-container div.center-window div.search-item h3 {
-  display: inline;
-  position: absolute;
-  padding-top:10px;
+  background-color: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
 }
 
-.main-container div.now-playing {
-  grid-area:now-playing;
-  padding: 15px;
-}
-.main-container div.now-playing h2 {
-  margin-top: 2px;
-}
-.main-container div.now-playing img {
+.playlist-image {
+  width: 40%;
   border-radius: 10px;
-  min-width:100%;
-  display:block;
-  max-width: 10vh;
-  margin-bottom: 10px;
+  display: inline-block;
 }
-.main-container div.now-playing a {
+.playlist-details {
+  display: inline-block;
+  position: absolute;
+  width: 55%;
+  padding-left: 10px;
+}
+.PlaylistPlayButton {
+  bottom: 10px;
+  padding: 5px 10px;
+  font-size: 14px;
+  border-radius: 20px;
+  border: none;
+  outline: none;
   color: white;
-  text-decoration: none;
+  background-color: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
 }
 
-.main-container div.audio-player {
-  grid-area:footer;
+.NewPlaylistButton {
+  margin-left: 5px;
+  padding: 10px 20px;
+  font-size: 16px;
+  width: calc(100% - 10px);
+  border-radius: 30px;
+  border: none;
+  outline: none;
+  color: white;
+  background-color: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
 }

@@ -14,7 +14,6 @@ const playlistSchema = new mongoose.Schema({
   }],
   artworkPath: {
     type: String,
-    required: true
   }
 });
 
