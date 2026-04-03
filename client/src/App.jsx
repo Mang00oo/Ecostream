@@ -7,6 +7,7 @@ import * as ListItemCreator from './components/list-items';
 import NowPlaying from './components/now-playing';
 import React, { useState, useEffect, createRef } from "react";
 import { Group, Panel } from "react-resizable-panels";
+import Popup from 'reactjs-popup';
 
 // npm start to run frontend
 const SERVER_API_URL = 'http://localhost:8080/';
@@ -22,6 +23,8 @@ const apiCall = () => {
   })
 }
 
+let clickedSong = {};
+
 function App() {
   const [listItems, setListItems] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -30,7 +33,9 @@ function App() {
   const [nowPlaying, setNowPlaying] = useState({});
   const [useAutoPlay, setUseAutoPlay] = useState(false);
   const [libraryItems, setLibraryItems] = useState([]);
+  const [popupLibraryItems, setPopupLibraryItems] = useState([]);
   const [openPlaylist, setOpenPlaylist] = useState(null);
+  const [playlistPopupOpen, setPlaylistPopupOpen] = useState(false);
 
   const player = createRef();
 
@@ -41,8 +46,6 @@ function App() {
   }
   const populateLibrary = () => { 
     axios.get(SERVER_API_URL + 'api/get_library').then((data) => {
-      console.log(data.data);
-
       setLibraryItems([]);
 
       const playlists = data.data;
@@ -52,6 +55,12 @@ function App() {
       });
 
       setLibraryItems(items);
+
+      const items2 = playlists.map(async (playlist) => {
+        return ListItemCreator.CreateLibraryItem(playlist, handlePopupItemClick);
+      });
+
+      setPopupLibraryItems(items2);
 
     });
   }
@@ -81,37 +90,25 @@ function App() {
       setUseAutoPlay(true);
       setNowPlaying(data.data);
     })
-    getNowPlaying();
+    //getNowPlaying();
   }
   const playSong = (_song) => {
-    setUseAutoPlay(true);
     console.log(_song);
-    axios.get(SERVER_API_URL + 'api/control_queue', { params: { action: 'play', song: _song } }).then((data) => {
+    axios.get(SERVER_API_URL + 'api/control_queue', { params: { action: 'play', songId: _song } }).then((data) => {
       setNowPlaying(data.data);
+      console.log(data.data);
     });
-  }
-
-  const backgroundStyle = {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    '-webkit-transition': 'background-image 0.7s ease',
-
-    'background-image': 'url(' + SERVER_API_URL + 'media/' + nowPlaying.artworkPath + ')',
-    'background-size': 'cover',
-    'background-position': 'center',
-    'z-index': '-1000',
-
-    'filter': 'blur(4px)',
-    '-webkit-filter': 'blur(4px)',
+    setUseAutoPlay(true);
   }
 
   const handleInputChange = (event) => {
     setSearchQuery(event.target.value);
   };
 
+  function addToPlaylistPopup(title, artistName, artworkUrl, mbid, albumMbid) {
+    clickedSong = { title, artistName, artworkUrl, mbid, albumMbid };
+    setPlaylistPopupOpen(true);
+  }
   async function search() {
     setListItems([]);
     setCenterContent('search');
@@ -119,7 +116,7 @@ function App() {
     console.log(tracks);
     // Build the list of React elements then set state once.
     const items = tracks.map(async (track) => {
-      const info = await lastfm.getTrackInfo(track.mbid);
+      const info = await lastfm.getTrackInfo(track.name, track.artist);
       const _songName = track.name;
       const _artistName = track.artist;
       const _mbid = track.mbid;
@@ -131,12 +128,22 @@ function App() {
       if (info && info.album && info.album.mbid) {
         _albumMbid = info.album.mbid;
       }
+      console.log(info);
       const _songUrl = track.url;
-      return ListItemCreator.CreateSearchItem(_songName, _artistName, _imageUrl, _songUrl, _mbid, _albumMbid);
+      return ListItemCreator.CreateSearchItem(_songName, _artistName, _imageUrl, _songUrl, _mbid, _albumMbid, addToPlaylistPopup);
     });
 
     setListItems(items);
   }
+  async function handlePopupItemClick(playlist) {
+    console.log('Adding song to playlist: ' + playlist.name);
+    console.log(clickedSong);
+    setPlaylistPopupOpen(false);
+    const response = await axios.get(SERVER_API_URL + 'api/download', { params: { artist: clickedSong.artistName, title: clickedSong.title, artworkUrl: clickedSong.artworkUrl, mbid: clickedSong.mbid, albumMbid: clickedSong.albumMbid } });
+    const response2 = await axios.get(SERVER_API_URL + 'api/add_to_playlist', { params: { playlistId: playlist._id, songId: response.data._id } });
+    populateLibrary();
+  }
+  const closePopup = () => setPlaylistPopupOpen(false);
 
   async function handleLibraryClick(playlist) {
     setListItems([]);
@@ -155,7 +162,7 @@ function App() {
 
   return (
     <div className="App">
-      <div style={backgroundStyle} className="background-image"></div>
+      <div style={nowPlaying?.artworkPath ? {'--background-image': `url('${SERVER_API_URL}media/${nowPlaying.artworkPath}')`} : {}} className="background-image"></div>
       <header className="App-header">
         <div className="top-bar">
           <input
@@ -177,6 +184,12 @@ function App() {
           {centerContent === 'none' || (
             <>
               <Panel defaultSize={40} minSize={'40%'} className="panel">
+                <Popup open={playlistPopupOpen} closeOnDocumentClick onClose={closePopup} modal>
+                  <div>
+                  <h3> Add to Playlist </h3>
+                  {popupLibraryItems}
+                  </div>
+                </Popup>
                 <button className="CenterCloseButton" onClick={handleCenterCloseClick}> X </button>
                 {centerContent === 'search' && <h2>Search Results</h2>}
                 {centerContent === 'playlist' && <h2>Playlist</h2>}

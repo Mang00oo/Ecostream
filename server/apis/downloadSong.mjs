@@ -3,14 +3,14 @@ import { YtDlp } from 'ytdlp-nodejs';
 const ytdlp = new YtDlp();
 
 // Download a video with fluent API
-export default async function downloadSong(url, mbid, path) {
+export default async function downloadSong(url, title, artist, path) {
   const result = await ytdlp
   .download(url)
   .audioFormat('mp3')
   .extractAudio()
   .on('progress', (p) => console.log(`${p.percentage_str}`))
   .output(path)
-  .setOutputTemplate(`../music/${mbid}.%(ext)s`)
+  .setOutputTemplate(`../music/${title}-${artist}.%(ext)s`)
   .run();
 
   console.log('Downloaded:', result.filePaths);

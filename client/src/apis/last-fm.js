@@ -17,8 +17,8 @@ export async function searchLastFM(query) {
     return [];
   }
 }
-export async function getTrackInfo(trackID) {
-  const url = `http://ws.audioscrobbler.com/2.0/?method=track.getinfo&mbid=${trackID}&api_key=${apiKey}&format=json`;
+export async function getTrackInfo(trackName, artistName) {
+  const url = `http://ws.audioscrobbler.com/2.0/?method=track.getinfo&track=${encodeURIComponent(trackName)}&artist=${encodeURIComponent(artistName)}&api_key=${apiKey}&format=json`;
 
   try {
     const response = await axios.get(url, {

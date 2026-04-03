@@ -54,8 +54,8 @@ app.get('/api/add_to_queue', async (req, res) => {
 app.get('/api/control_queue', async (req, res) => {
       const action = req.query.action; // 'next', 'prev', or 'play'
       const song = req.query.songId; // for 'play' action
+      let _song;
       const user = await User.findOne({ username: 'test_user' }).populate('queue').exec();
-      console.log(user);
       if (!user) {
             res.status(404).send('User not found');
             return;
@@ -65,14 +65,20 @@ app.get('/api/control_queue', async (req, res) => {
       } else if (action === 'prev') {
             user.posInQueue = Math.max(user.posInQueue - 1, 0);
       } else if (action === 'play') {
-            console.log('Playing song ID: ' + song._id);
-            await User.findOneAndUpdate({ username: 'test_user' }, { $push: { queue: song._id, $position: 0 }, queueSource: { Song: song.mbid } });            
+            console.log('Playing song ID: ' + song);
+            _song = await Song.findById(song);
+            user.queue.unshift(_song);
             user.posInQueue = 0;
       }
       await user.save();
+      
 
       const nowPlaying = user.queue[user.posInQueue];
-      res.send(nowPlaying);
+      if (_song) {
+            res.send(_song);
+      } else {
+            res.send(nowPlaying);
+      }   
 });
 
 app.get('/api/get_now_playing', async (req, res) => { 
@@ -107,6 +113,21 @@ app.get('/api/create_playlist', async (req, res) => {
       await User.findOneAndUpdate({ username: 'test_user' }, { $push: { playlists: newPlaylist._id } });
       res.send('Playlist created');
 });
+app.get('/api/add_to_playlist', async (req, res) => {
+      const playlistId = req.query.playlistId;
+      const song = await Song.findById(req.query.songId);
+      const playlist = await Playlist.findById(playlistId);
+      if (!playlist) {
+            res.status(404).send('Playlist or song not found');
+            return;
+      }
+      playlist.songs.push(song._id);
+      if (!playlist.artworkPath && song.artworkPath) {
+            playlist.artworkPath = song.artworkPath;
+      }
+      await playlist.save();
+      res.send('Song added to playlist');
+});
 
 app.get('/', async (req, res) => {
       res.send('Hello from Ecostream!');
@@ -128,15 +149,12 @@ app.get('/api/download', async (req, res) => {
       const searchQuery = `${title} - ${artist}`;
       console.log('Searching: ' + searchQuery);
       const results = await muse.search(searchQuery, { filter: 'songs' });
-      res.send(results);
-      console.log(results);
       let topResult = results.categories[0].results[0];
       console.log('Found: ' + topResult.title);
-      console.log(topResult);
       const _duration = topResult.duration;
 
       // Download artwork
-      if ( !fs.existsSync(path.join(__dirname, '../music/', `${albumMbid}.jpg`))) {
+      if ( !fs.existsSync(path.join(__dirname, '../music/', `${mbid}.jpg`))) {
             try {
                   const response = await axios.get(encodeURI(artworkUrl), { 
                         responseType: 'stream',
@@ -146,7 +164,7 @@ app.get('/api/download', async (req, res) => {
                               'Host': 'lastfm.freetls.fastly.net',
                         }
                   });
-                  response.data.pipe(fs.createWriteStream(path.join(__dirname, '../music/', `${albumMbid}.jpg`)));
+                  response.data.pipe(fs.createWriteStream(path.join(__dirname, '../music/', `${title}-${artist}.jpg`)));
             } catch (error) {
                   console.error('Error downloading artwork:', error);
             }
@@ -156,7 +174,7 @@ app.get('/api/download', async (req, res) => {
       // Check type, if not song then loop through top_result.more for the first song
       const link = 'https://www.youtube.com/watch?v=' + topResult.videoId;
       const dl = await import('./apis/downloadSong.mjs');
-      const result = await dl.default(link, mbid, path.join(__dirname, '../music/'));
+      const result = await dl.default(link, title, artist, path.join(__dirname, '../music/'));
 
       // Save to MongoDB
       const newSong = new Song({
@@ -164,10 +182,11 @@ app.get('/api/download', async (req, res) => {
             artist: artist,
             duration: _duration,
             mbid: mbid,
-            songPath: path.join(`${mbid}.mp3`),
-            artworkPath: path.join(`${albumMbid}.jpg`)
+            songPath: path.join(`${title}-${artist}.mp3`),
+            artworkPath: path.join(`${title}-${artist}.jpg`)
       });
       await newSong.save();
+      res.send(newSong);
 
       console.log('Download complete: ' + title + ' by ' + artist);
 });
