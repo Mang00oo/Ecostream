@@ -1,0 +1,16 @@
+{
+  "name": "desktop",
+  "version": "1.0.0",
+  "description": "A desktop app for Ecostream",
+  "license": "ISC",
+  "author": "Mang0o",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "electron": "^41.3.0"
+  }
+}

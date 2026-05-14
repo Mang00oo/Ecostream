@@ -22,6 +22,10 @@ const songSchema = new mongoose.Schema({
   artworkPath: {
     type: String,
     required: true
+  },
+  isCache: {
+    type: Boolean,
+    default: false
   }
 });
 

@@ -1,48 +1,42 @@
 import Popup from 'reactjs-popup';
-import { getPlaylists } from '../apis/server-api';
-import { useState } from 'react';
+import * as serverApi from '../apis/server-api';
+import { useState, useEffect } from 'react';
+import * as ListItemCreator from './list-items';
 
-function CreateLibraryItem(playlist, callback) {
-  const songCount = playlist.songs.length;
-  const name = playlist.name;
-  const image = playlist.artworkPath ? 'http://localhost:8080/media/' + playlist.artworkPath : 'https://placehold.co/300x300?text=' + name;
-  const handleClick = () => {
-    callback(playlist);
-  }
-  return (
-    <div className="library-item" onClick={handleClick}>
-      <img src={image} onerror="this.onerror=null; this.src='https://placehold.co/300x300?text=No+Image';" alt="Playlist Image"></img>
-      <h3> {playlist.name} </h3>
-      <p> {songCount} songs</p>
-    </div>
-  )
-}
-
-export default function AddToPlaylistPopup(song) {
-    const handlePlaylistClick = (playlist) => {
-        console.log('Adding song ' + song + ' to playlist ' + playlist.name);
-        // Make API call to add song to playlist
+export default function AddToPlaylistPopup({ song, setSong, refreshLibrary } ) {
+    const closeModal = () => {
+        setSong({});
+    }
+    const handlePlaylistClick = async (playlist) => {
+        console.log('Adding song ' + song.title + ' to playlist ' + playlist.name);
+        const songToAdd = song;
+        closeModal();
+        console.log(songToAdd);
+        try {
+            await serverApi.downloadSong(songToAdd, 'playlist', playlist._id);
+            console.log('Song added to playlist successfully');
+            if (typeof refreshLibrary === 'function') {
+                refreshLibrary();
+            }
+        } catch (error) {
+            console.error('Failed to add song to playlist:', error);
+        }
     }
     const [playlists, setPlaylists] = useState([]);
 
-        console.log('Fetching playlists...');
-    
-        setPlaylists([]);
+    useEffect(() => {
+        const loadPlaylists = async () => {
+            const data = await serverApi.getLibrary();
+            setPlaylists(data);
+        };
+        loadPlaylists();
+    }, [song]);
 
-        const data = getPlaylists();
-
-        const items = data.map(async (playlist) => {
-            return CreateLibraryItem(playlist, handlePlaylistClick);
-        });
-
-        setPlaylists(items);
-    
-      
     return (
-        <Popup trigger={<button className="AddButton"> + </button>} modal position="right center">
+        <Popup open={!!song.title} closeOnDocumentClick onClose={closeModal} position="right center">
             <div>
-            <h3> Add to Playlist </h3>
-            {playlists}
+                <h3> Add to Playlist </h3>
+                {playlists.length > 0 ? playlists.map((playlist) => <ListItemCreator.CreateLibraryItem key={playlist._id || playlist.name} playlist={playlist} callback={handlePlaylistClick} />) : <p> No playlists yet. Try creating one! </p>}
             </div>
         </Popup>
     );

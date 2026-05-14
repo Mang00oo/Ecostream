@@ -4,7 +4,7 @@
   flex-direction: column;
   line-height: 1;
   font-family: inherit;
-  width: 98.5%;
+  width: calc(100%-10px);
   border-radius: 10px;
   padding: 10px;
   margin: 5px;
@@ -83,7 +83,7 @@
 }
 
 .rhap_time {
-  color: #333;
+  color: #ffffff;
   font-size: 16px;
   user-select: none;
   -webkit-user-select: none;
@@ -103,7 +103,7 @@
   height: 100%;
   position: absolute;
   z-index: 2;
-  background-color: #868686;
+  background-color: #ffffff;
   border-radius: 2px;
 }
 
@@ -149,7 +149,7 @@
   font-size: 26px;
   width: 26px;
   height: 26px;
-  color: #868686;
+  color: #ffffff;
   margin-right: 6px;
 }
 
@@ -162,7 +162,7 @@
 
 .rhap_main-controls-button {
   margin: 0 3px;
-  color: #868686;
+  color: #ffffff;
   font-size: 35px;
   width: 35px;
   height: 35px;
@@ -186,7 +186,7 @@
   font-size: 26px;
   width: 26px;
   height: 26px;
-  color: #868686;
+  color: #ffffff;
   margin-right: 6px;
 }
 

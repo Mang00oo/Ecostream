@@ -1,0 +1,34 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Panel } from "react-resizable-panels";
+import * as serverApi from '../apis/server-api';
+import { FaPlus } from "react-icons/fa6";
+import * as ListItemCreator from './list-items';
+import { gsap } from "gsap";
+
+const LibraryList = ({centerContent, setData, refreshTrigger}) => {
+    const [libraryItems, setLibraryItems] = useState([]);
+    const handleLibraryClick = (playlist) => {
+        console.log('Clicked playlist: ' + playlist.name);
+        setData(playlist);
+        centerContent('playlist');
+    }
+    const createPlaylist = async() => { }
+    const loadPlaylists = async () => {
+        const data = await serverApi.getLibrary();
+        setLibraryItems(data);
+    };
+    useEffect(() => {
+        loadPlaylists();
+    }, [refreshTrigger]);
+
+    return (
+        <Panel defaultSize={30} minSize={'30%'} className="panel" collapsible={true}>
+            <h2>Library</h2> 
+
+            <button className="NewPlaylistButton" onClick={createPlaylist}> <FaPlus /> New Playlist </button>
+            {libraryItems.length > 0 ? libraryItems.map((playlist) => <ListItemCreator.CreateLibraryItem key={playlist._id || playlist.name} playlist={playlist} callback={handleLibraryClick} />) : <p> No playlists yet. Try creating one! </p>}
+        </Panel>
+    );
+}
+
+export default LibraryList;

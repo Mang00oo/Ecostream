@@ -1,3 +1,6 @@
+:root {
+  --background-image: url(https://everwallpaper.com/cdn/shop/products/1034.jpg?v=1658817868&width=1946);
+}
 .background-image {
   position: fixed;
   top: 0;
@@ -10,9 +13,21 @@
   background-size: cover;
   background-position: center;
   z-index: -1000;
+  transform: scale(1.02);
 
   filter: blur(4px);
   -webkit-filter: blur(4px);
+}
+div {
+  color: white;
+}
+.center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  justify-content: center;
+  text-align: center;
 }
 .search-bar {
   display: flex;
@@ -24,6 +39,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  -webkit-app-region: drag;
 
   border-radius: 10px;
   padding: 10px;
@@ -32,7 +48,13 @@
   background-color: rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(18px);
 }
-.top-bar input {
+.search-form {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+.search-form input {
   width: 60%;
   padding: 10px;
   font-size: 16px;
@@ -42,8 +64,13 @@
   color: white;
   background-color: rgba(255, 255, 255, 0.3);
   backdrop-filter: blur(10px);
+  -webkit-app-region: no-drag;
 }
-.top-bar button {
+input::placeholder {
+  color: white;
+  opacity: 1; /* Required for Firefox to show full color */
+}
+.search-form button {
   margin-left: 10px;
   padding: 10px 20px;
   font-size: 16px;
@@ -53,11 +80,16 @@
   color: white;
   background-color: rgba(255, 255, 255, 0.3);
   backdrop-filter: blur(10px);
+  cursor: pointer;
+  align-items: center;
+  display: flex;
+  -webkit-app-region: no-drag;
 }
 .audio-player {
   position: fixed;
   bottom: 0;
   left: 0;
+  right: 0;
 }
 
 .grid {
@@ -74,11 +106,14 @@
   background-color: rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(18px);
   overflow-y: scroll;
+  filter: drop-shadow(5px, 5px, 10px, black);
+  perspective: 800px;
 }
 
 .panel h2 {
   margin-top: 4px;
   margin-left: 7px;
+  overflow-x: visible;
 }
 
 .now-playing-image {
@@ -127,8 +162,8 @@ a {
 .search-item {
   width: calc(100% - 30px);
   align-items: left;
+  display: flex;
   padding: 10px;
-  padding-bottom: 4px;
   margin: 0px;
   border-radius: 10px;
   margin: 5px;
@@ -172,6 +207,7 @@ a {
 }
 .CenterCloseButton {
   position: absolute;
+  display: flex;
   right: 20px;
   top: 20px;
   padding: 5px 10px;
@@ -181,35 +217,62 @@ a {
   border: none;
   outline: none;
   color: white;
+  align-items: center;
   background-color: rgba(255, 255, 255, 0.3);
   backdrop-filter: blur(10px);
 }
 
 .playlist-image {
   width: 40%;
+  margin-left:6px;
+  margin-right:8px;
   border-radius: 10px;
   display: inline-block;
 }
 .playlist-details {
   display: inline-block;
   position: absolute;
-  width: 55%;
+  width: 52%;
   padding-left: 10px;
 }
-.song-details {
-  display: inline-block;
-  position: absolute;
-  width: 70%;
-  container-type: inline-size;
+.playlist-details h3 {
+  margin-top: 5px;
 }
-.song-details h3 {
+
+.song-details {
+  width: 70%;
+  flex-direction: column;
+}
+.SongName{
   width: 100%;
+  height: auto;
   margin-top: 5px;
   margin-bottom: 5px;
-  font-size: 6cqw;
+  font-weight: bold;
+  font-size: 23px;
+}
+.ArtistName {
+  font-size: 16px;
+  margin-top: 8px;
+  margin-bottom: 0px;
 }
 
 .PlayButton {
+  bottom: 10px;
+  aspect-ratio: 1/1;
+  padding: 5px 10px;
+  font-size: 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  color: white;
+  background-color: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+  align-items: center;
+  display: flex;
+}
+.PlayButton2 {
   bottom: 10px;
   padding: 5px 10px;
   font-size: 14px;
@@ -220,6 +283,9 @@ a {
   color: white;
   background-color: rgba(255, 255, 255, 0.3);
   backdrop-filter: blur(10px);
+  align-items: center;
+  display: flex;
+  margin-bottom: 10px;
 }
 
 .NewPlaylistButton {
@@ -253,6 +319,11 @@ a {
     transform: scale(1) translateY(0px);
     opacity: 1;
     box-shadow: 0 0 500px rgba(241, 241, 241, 0);
+  }
+}
+@keyframes fadeInKeyframe {
+  to {
+    opacity: 1;
   }
 }
 

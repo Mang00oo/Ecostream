@@ -8,6 +8,11 @@ const playlistSchema = new mongoose.Schema({
   description: {
     type: String
   },
+  shuffle: {
+    type: String,
+    enum: ['Shuffle', 'No Shuffle', 'Smart Shuffle'],
+    default: 'No Shuffle'
+  },
   songs: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Song'

@@ -4,230 +4,236 @@ import AudioPlayer from 'react-h5-audio-player';
 import './AudioPlayer.css';
 import * as lastfm from './apis/last-fm';
 import * as ListItemCreator from './components/list-items';
+import * as serverApi from './apis/server-api';
 import NowPlaying from './components/now-playing';
-import React, { useState, useEffect, createRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Group, Panel } from "react-resizable-panels";
 import Popup from 'reactjs-popup';
+import LibraryList from './components/library-list';
+import Playlist from './components/playlist';
+import SearchResults from './components/search-results';
+import Queue from './components/queue';
+import Lyrics from './components/lyrics';
+import Login from './components/login';
+
+import { motion } from 'motion/react';
+import * as nativeApi from './apis/native-api';
+import { FaSearch } from "react-icons/fa";
+import { Toaster } from 'react-hot-toast';
 
 // npm start to run frontend
-const SERVER_API_URL = 'http://localhost:8080/';
-
-
-const apiCall = () => {
-  axios.get(SERVER_API_URL + 'api/get_song').then((data) => {
-    //this console.log will be in our frontend console
-    const songURL = data.data;
-    axios.get(songURL).then((songData) => {
-      console.log(songData.data);
-    })
-  })
-}
 
 let clickedSong = {};
 
 function App() {
   const [listItems, setListItems] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [centerContent, setCenterContent] = useState('none'); // 'search', 'playlist', 'queue'. 'none'
 
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const [centerContent, setCenterContent] = useState('none'); // 'search', 'playlist', 'queue'. 'none'
+  const [lastCenterContent, setLastCenterContent] = useState('none');
+
+  const [centerContententData, setCenterContentData] = useState({});
   const [nowPlaying, setNowPlaying] = useState({});
+  const [posInSong, setPosInSong] = useState(0);
+  const [isSignedIn, setIsSignedIn] = useState(false);
+  
   const [useAutoPlay, setUseAutoPlay] = useState(false);
-  const [libraryItems, setLibraryItems] = useState([]);
+  const [libraryItems, setLibraryItems] = useState(null);
+  const [libraryReload, setLibraryReload] = useState(0);
   const [popupLibraryItems, setPopupLibraryItems] = useState([]);
   const [openPlaylist, setOpenPlaylist] = useState(null);
   const [playlistPopupOpen, setPlaylistPopupOpen] = useState(false);
 
-  const player = createRef();
+  const player = useRef(null);
+  const library = useRef(null);
+  const searchResultsRef = useRef(null);
 
-  const getNowPlaying = () => {
-    axios.get(SERVER_API_URL + 'api/get_now_playing').then((data) => {
-      setNowPlaying(data.data);
-    })
+  const getNowPlaying = async() => {
+    const response = await serverApi.getNowPlaying();
+    setNowPlaying(response);
   }
-  const populateLibrary = () => { 
-    axios.get(SERVER_API_URL + 'api/get_library').then((data) => {
-      setLibraryItems([]);
+  const populateLibrary = async() => { 
+    const playlists = await serverApi.getLibrary();
+    setLibraryItems(playlists);
 
-      const playlists = data.data;
+    setPopupLibraryItems(playlists);
 
-      const items = playlists.map(async (playlist) => {
-        return ListItemCreator.CreateLibraryItem(playlist, handleLibraryClick);
-      });
-
-      setLibraryItems(items);
-
-      const items2 = playlists.map(async (playlist) => {
-        return ListItemCreator.CreateLibraryItem(playlist, handlePopupItemClick);
-      });
-
-      setPopupLibraryItems(items2);
-
-    });
-  }
+  };
   useEffect(() => {
-    getNowPlaying();
-    populateLibrary();
+    nativeApi.init(window);
+    async function login() {
+      const success = await serverApi.checkLogin();
+      setIsSignedIn(success);
+    }
+    login()
+    
+    const playEventCallback = async(isPlaying) => {
+      console.log('Received play event from server: ' + isPlaying);
+      console.log(player.current);
+      if (player.current) {
+        await getNowPlaying();
+        if (isPlaying) {
+          player.current.audio.current.play();
+        } else {
+          player.current.audio.current.pause();
+        }
+      }
+    }
+    nativeApi.subscribeToPlayEvent(playEventCallback);
+    serverApi.subscribeToPlayEvent(playEventCallback);
   }, []);
-
-  const createPlaylist = () => {
-    axios.get(SERVER_API_URL + 'api/create_playlist', { params: { name: 'New Playlist' } }).then((data) => {
-      console.log(data.data);
-
+  useEffect(() => {
+    if (isSignedIn) {
+      getNowPlaying();
       populateLibrary();
-    })
+    }
+  }, [isSignedIn]);
+
+  const createPlaylist = async () => {
+    const response = await serverApi.createPlaylist('New Playlist');
+    console.log(response);
+    await populateLibrary();
   }
 
-  const nextSong = () => {
+  const nextSong = async () => {
     console.log('Next song');
-    axios.get(SERVER_API_URL + 'api/control_queue', { params: { action: 'next' } }).then((data) => {
-      setUseAutoPlay(true);
-      setNowPlaying(data.data);
-    })
-  }
-  const prevSong = () => {
-    console.log('Previous song');
-    axios.get(SERVER_API_URL + 'api/control_queue', { params: { action: 'prev' } }).then((data) => {
-      setUseAutoPlay(true);
-      setNowPlaying(data.data);
-    })
-    //getNowPlaying();
-  }
-  const playSong = (_song) => {
-    console.log(_song);
-    axios.get(SERVER_API_URL + 'api/control_queue', { params: { action: 'play', songId: _song } }).then((data) => {
-      setNowPlaying(data.data);
-      console.log(data.data);
-    });
+    const response = await serverApi.controlQueue('next');
     setUseAutoPlay(true);
+    setNowPlaying(response);
+    serverApi.startPlayingOnAllClients();
   }
-
+  const prevSong = async () => {
+    console.log('Previous song');
+    const response = await serverApi.controlQueue('prev');
+    setUseAutoPlay(true);
+    setNowPlaying(response);
+    serverApi.startPlayingOnAllClients();
+  }
+  const playSong = async (response) => {
+    setUseAutoPlay(true);
+    console.log(response);
+    await getNowPlaying();
+    if (response) {
+      await setNowPlaying(response);
+    }
+    
+    serverApi.startPlayingOnAllClients();
+  }
   const handleInputChange = (event) => {
     setSearchQuery(event.target.value);
   };
-
-  function addToPlaylistPopup(title, artistName, artworkUrl, mbid, albumMbid) {
-    clickedSong = { title, artistName, artworkUrl, mbid, albumMbid };
+  async function playSongFromSearch(songName, artistName, artworkUrl) {
+    console.log('Playing song from search: ' + songName + ' by ' + artistName);
+    const response = await serverApi.addStreamedSong(artistName, songName, artworkUrl)
+    await playSong(response._id);
+    console.log(nowPlaying);
+  }
+  function addToPlaylistPopup(title, artistName, artworkUrl, mbid, albumName) {
+    clickedSong = { title, artistName, artworkUrl, mbid, albumName };
     setPlaylistPopupOpen(true);
   }
   async function search() {
-    setListItems([]);
     setCenterContent('search');
-    const tracks = await lastfm.searchLastFM(searchQuery);
-    console.log(tracks);
-    // Build the list of React elements then set state once.
-    const items = tracks.map(async (track) => {
-      const info = await lastfm.getTrackInfo(track.name, track.artist);
-      const _songName = track.name;
-      const _artistName = track.artist;
-      const _mbid = track.mbid;
-      let _albumMbid = null;
-      let _imageUrl = 'https://placehold.co/300x300?text=No+Image'
-      if (info && info.album && info.album.image && info.album.image[2] && info.album.image[2]['#text']) {
-        _imageUrl = info.album.image[3]['#text'];
-      }
-      if (info && info.album && info.album.mbid) {
-        _albumMbid = info.album.mbid;
-      }
-      console.log(info);
-      const _songUrl = track.url;
-      return ListItemCreator.CreateSearchItem(_songName, _artistName, _imageUrl, _songUrl, _mbid, _albumMbid, addToPlaylistPopup);
-    });
-
-    setListItems(items);
+    if (searchResultsRef.current?.performSearch) {
+      await searchResultsRef.current.performSearch();
+    }
   }
   async function handlePopupItemClick(playlist) {
     console.log('Adding song to playlist: ' + playlist.name);
     console.log(clickedSong);
     setPlaylistPopupOpen(false);
-    const response = await axios.get(SERVER_API_URL + 'api/download', { params: { artist: clickedSong.artistName, title: clickedSong.title, artworkUrl: clickedSong.artworkUrl, mbid: clickedSong.mbid, albumMbid: clickedSong.albumMbid } });
-    const response2 = await axios.get(SERVER_API_URL + 'api/add_to_playlist', { params: { playlistId: playlist._id, songId: response.data._id } });
+    const response = await serverApi.downloadSong(clickedSong);
+    const response2 = await serverApi.addToPlaylist(playlist._id, response._id);
     populateLibrary();
   }
   const closePopup = () => setPlaylistPopupOpen(false);
 
-  async function handleLibraryClick(playlist) {
-    setListItems([]);
-    setOpenPlaylist(playlist);
-    setCenterContent('playlist');
-    const songs = playlist.songs;
-    const items = songs.map((song) => {
-      return ListItemCreator.CreateSongItem(song, playSong);
-    });
-    setListItems(items);
-    console.log(songs);
-  }
   function handleCenterCloseClick() {
     setCenterContent('none');
+  }
+  const changeCenterContent = async (content) => {
+    await setLastCenterContent(centerContent);
+    await setCenterContent(content);
+  }
+  const reverseCenterContent = async () => {
+    await setCenterContent(lastCenterContent);
+    await setLastCenterContent('none');
   }
 
   return (
     <div className="App">
-      <div style={nowPlaying?.artworkPath ? {'--background-image': `url('${SERVER_API_URL}media/${nowPlaying.artworkPath}')`} : {}} className="background-image"></div>
+      < Toaster 
+          toastOptions={{
+            className: '',
+            style: {
+              marginTop: '38px',
+              backdropFilter: 'blur(18px)',
+              backgroundColor: 'rgba(0, 0, 0, 0.1)',
+              color: 'white',
+              borderRadius: 10,
+              padding: 12,
+            },
+          }}
+      />
+      <div style={nowPlaying?.artworkPath ? {'--background-image': `url('${serverApi.getMediaUrl()}${nowPlaying.artworkPath}')`} : {}} className="background-image"></div>
       <header className="App-header">
+        <title>Ecostream</title>
+        {isSignedIn &&
+        <>
         <div className="top-bar">
-          <input
-            type="text"
-            placeholder="Search library..."
-            onChange={handleInputChange}
-          />
-          <button onClick={search}>Search</button>
+          <form className="search-form" onSubmit={(e) => { e.preventDefault(); search(); }}>
+            <input
+              type="text"
+              placeholder="Search library..."
+              value={searchQuery}
+              onChange={handleInputChange}
+            />
+            <button><FaSearch /></button>
+          </form>
+          <button className="PlayButton2"> User </button>
         </div>
         
         <Group className="grid">
-          <Panel defaultSize={30} minSize={'8%'} className="panel" collapsible={true}>
-            <h2>Library</h2> 
+          <LibraryList centerContent={changeCenterContent} setData={setCenterContentData} refreshTrigger={libraryReload} ref={library}></LibraryList>
 
-            <button className="NewPlaylistButton" onClick={createPlaylist}> + New Playlist </button>
-            {libraryItems.length > 0 ? libraryItems : <p> No library items yet. Try adding some songs to your library! </p>}
-          </Panel>
-
-          {centerContent === 'none' || (
-            <>
-              <Panel defaultSize={40} minSize={'40%'} className="panel">
-                <Popup open={playlistPopupOpen} closeOnDocumentClick onClose={closePopup} modal>
-                  <div>
-                  <h3> Add to Playlist </h3>
-                  {popupLibraryItems}
-                  </div>
-                </Popup>
-                <button className="CenterCloseButton" onClick={handleCenterCloseClick}> X </button>
-                {centerContent === 'search' && <h2>Search Results</h2>}
-                {centerContent === 'playlist' && <h2>Playlist</h2>}
-                {centerContent === 'queue' && <h2>Queue</h2>}
-
-                {centerContent === 'search' && (listItems.length > 0 ? listItems : <p> Searching... </p>)}
-                {centerContent != 'playlist' || (
-                  <>
-                    <img className="playlist-image" src={openPlaylist.artworkPath ? 'http://localhost:8080/media/' + openPlaylist.artworkPath : 'https://placehold.co/300x300?text=' + openPlaylist.name} alt="Playlist cover" />
-                    <div className="playlist-details">
-                      <h3> {openPlaylist.name} </h3>
-                      <p> {openPlaylist.songs.length} songs </p>
-                      <button className="PlayButton"> Play </button>
-                    </div>
-                    {listItems.length > 0 ? listItems : <p> No songs in this playlist yet. Try adding some! </p>}
-                  </>
-                )}
-                {centerContent === 'queue' && <p> Queue content coming soon! </p>}
-              </Panel>
-            </>
+          {centerContent=='playlist' && (
+            <Playlist data={centerContententData} playCallback={playSong} setCenterContent={changeCenterContent}></Playlist>
+          )}
+          {centerContent=='search' && (
+            <SearchResults searchQuery={searchQuery} ref={searchResultsRef} onLibraryUpdated={() => setLibraryReload((prev) => prev + 1)} setCenterContent={changeCenterContent}></SearchResults>
+          )}
+          {centerContent=='queue' && (
+            <Queue playCallback={playSong} setCenterContent={changeCenterContent} reverseCenterContent={reverseCenterContent}></Queue>
+          )}
+          {centerContent=='lyrics' && (
+            <Lyrics song={nowPlaying} setCenterContent={changeCenterContent} posInSong={posInSong}></Lyrics>
           )}
 
-          <NowPlaying song={nowPlaying}></NowPlaying>
+          <NowPlaying song={nowPlaying} setCenterContent={changeCenterContent} ></NowPlaying>
         </Group>
           
         <AudioPlayer
               className='audio-player'
-              src= {SERVER_API_URL + 'media/'+ nowPlaying.songPath}
+              src= {!nowPlaying.isStream ? serverApi.getMediaUrl() + nowPlaying.songPath : 'http://localhost:8080/api/get_song_stream?videoId=' + nowPlaying.songPath}
               onClickNext={nextSong}
               onClickPrevious={prevSong}
               onEnded={nextSong}
+              onPlay={serverApi.startPlayingOnAllClients}
+              onPause={serverApi.stopPlayingOnAllClients}
+              onListen={(e) => setPosInSong(e.target.currentTime)}
               autoPlay={useAutoPlay}
               showJumpControls={false}
               showSkipControls={true}
               ref={player}
               // other props here
           />
-          
+        </>
+        }
+        {!isSignedIn &&
+          <Login setSignedIn={setIsSignedIn}/>
+        }
+        
         
       </header>
     </div>
