@@ -20,9 +20,43 @@ const jwt = require('jsonwebtoken');
 const uri = process.env.MONGOOSE_URI;
 const clientOptions = { serverApi: { version: '1', strict: true, deprecationErrors: true } };
 
-app.use(cors());
+const allowedOrigins = [
+      'https://ecostream.local',
+      'http://localhost',          // Android Capacitor app origin
+      'capacitor://localhost',    // iOS Capacitor app origin
+      'file://',
+      'http://100.90.153.39:8080',
+];
+app.use(cors({
+  origin: function (origin, callback) {
+    // 1. CRITICAL: If no origin header is present (like native HTML <img> or <audio> tags), allow it!
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    // 2. If it's a known native app scheme, allow it
+    if (allowedOrigins.includes(origin) || origin.startsWith('capacitor-electron://')) {
+      return callback(null, true);
+    }
+    
+    // 3. FALLBACK FOR WEB APP: Accept any web client but mirror their specific origin back to them
+    // This stops your browser clients and different Tailscale network IPs from crashing!
+    return callback(null, true); 
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
-app.use('/media', express.static(path.join(__dirname, '../music'), { fallthrough: false }));
+app.use('/media', express.static(path.join(__dirname, '../music'), { 
+      fallthrough: false,
+      setHeaders: (res, path, stat) => {
+            res.set('Access-Control-Allow-Origin', '*'); 
+            res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+            res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+            res.set('Accept-Ranges', 'bytes'); 
+      }
+}));
 
 const PORT = 8080;
 const httpServer = createServer(app);
@@ -60,21 +94,25 @@ async function runMongoose() {
 }
 runMongoose().catch(console.dir);
 
-function authenticateToken(req, res, next) {
+async function authenticateToken(req, res, next) {
   // Extract token from 'Authorization: Bearer <TOKEN>'
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) return res.status(401).json({ message: 'No token provided' });
 
-  jwt.verify(token, process.env.PASSWORD, (err, user) => {
+  jwt.verify(token, process.env.PASSWORD, async (err, user) => {
     if (err) return res.status(403).json({ message: 'Invalid or expired token' });
-    const dbUser = User.findById(user.userID);
-    console.log(dbUser.password);
-    if (user.userID != 'none' && user.password != dbUser.password) {
-      return res.status(403).json({ message: 'Invalid profile password' })
+    if (user.userID != 'none') {
+      const dbUser = await User.findById(user.userID);
+      console.log('THING');
+      console.log(user.password)
+      console.log(user.password);
+      console.log(dbUser);
+      if (user.userID != 'none' && user.password != dbUser.password) {
+            return res.status(403).json({ message: 'Invalid profile password' })
+      }
     }
-    
     // Attach decoded user payload to request
     req.user = user;
     next(); // Pass control to the next handler
@@ -82,7 +120,28 @@ function authenticateToken(req, res, next) {
 }
 app.use('/api', authenticateToken); // Apply authentication middleware to all /api routes below
 
-app.get('/login', async (req, res) => {
+app.get('/api/get_users', async (req, res) => {
+      const users = await User.find();
+      users.forEach(user => { if (user.password == '') {user.password = false} else {user.password = true} } );
+      res.send(users);
+});
+app.get('/api/login_as_user', async (req, res) => {
+      const _id = req.query.userID;
+      const pwd = req.query.password;
+      const user = await User.findById(_id);
+      if (user) {
+            if (user.password == pwd || (user.password || user.password=='' && pwd == '')) {
+                  const newToken = jwt.sign({ userID: _id, password: pwd }, process.env.PASSWORD, { expiresIn: '7d' });
+                  res.send({ success: true, token: newToken, userID: _id, password: '' });
+            } else {
+                  res.send({ success: false });
+            }
+      } else {
+            res.send({ success: false });
+      }
+});
+
+app.get('/auth/login', async (req, res) => {
       const token = req.query.token;
       const password = req.query.password;
       if (password) {
@@ -109,18 +168,18 @@ app.get('/login', async (req, res) => {
             return;
       }
 });
-function getCurrentUser(token) {
-      const decoded = jwt.verify(token, process.env.PASSWORD, (err, decoded) => {
-            if (err) {
-                  console.log('Invalid token provided');
-                  return;
-            }
-            const user = User.findById(decoded.userID);
-            if (user.password == decoded.password) {
-                  return user;
-            }
-      });
-      return null;
+function getCurrentUser(req) {
+      const authHeader = req.headers.authorization;
+      const token = authHeader && authHeader.split(' ')[1];
+      if (!token) return null;
+      try {
+            const decoded = jwt.verify(token, process.env.PASSWORD);
+            console.log(decoded.userID);
+            return decoded.userID;
+      } catch (err) {
+            console.log('Invalid token provided');
+            return null;
+      }
 }
 
 app.get('/api/get_song', (req, res) => {
@@ -128,6 +187,7 @@ app.get('/api/get_song', (req, res) => {
       res.send('http://localhost:8080/media/' + mbid + '.mp3');
 })
 app.get('/api/add_to_queue', async (req, res) => {
+      const user = await getCurrentUser(req);
       const mbid = req.query.mbid;
       const index = req.query.index;
       console.log('Adding to queue: ' + mbid);
@@ -136,14 +196,14 @@ app.get('/api/add_to_queue', async (req, res) => {
             res.status(404).send('Song not found');
             return;
       }
-      await User.findOneAndUpdate({ username: 'test_user' }, { $push: { queue: song._id, }, queueSource: { Song: song.mbid } });
+      await User.findByIdAndUpdate(user, { $push: { queue: song._id, }, queueSource: { Song: song.mbid } });
       res.send('Added to queue');
 });
 app.get('/api/control_queue', async (req, res) => {
       const action = req.query.action; // 'next', 'prev', or 'play'
       const song = req.query.songId; // for 'play' action
       let _song;
-      const user = await User.findOne({ username: 'test_user' }).populate('queue').exec();
+      const user = await User.findById(await getCurrentUser(req)).populate('queue').exec();
       if (!user) {
             res.status(404).send('User not found');
             return;
@@ -173,7 +233,7 @@ app.get('/api/control_queue', async (req, res) => {
       }   
 });
 app.get('/api/get_queue', async (req, res) => {
-      const user = await User.findOne({ username: 'test_user' }).populate('queue').exec();
+      const user = await User.findById(await getCurrentUser(req)).populate('queue').exec();
       if (!user) {
             res.status(404).send('User not found');
             return;
@@ -272,9 +332,8 @@ app.get('/api/play_playlist', async (req, res) => {
             res.status(404).send('Playlist not found');
             return;
       }
-      const user = await User.findOne({ username: 'test_user' }).exec();
+      const user = await User.findById(getCurrentUser(req));
       if (!user) {
-            console.log('User not found: test_user');
             res.status(404).send('User not found');
             return;
       }
@@ -295,7 +354,7 @@ app.get('/api/play_playlist', async (req, res) => {
 });
 app.get('/api/set_shuffle', async (req, res) => {
       const shuffleType = req.query.shuffleType;
-      const user = await User.findOne({ username: 'test_user' }).populate('queue').populate('queueSource').exec();
+      const user = await User.findById(await getCurrentUser(req)).populate('queue').populate('queueSource').exec();
       if (!user) {
             res.status(404).send('User not found');
             return;
@@ -334,8 +393,8 @@ app.get('/api/set_shuffle', async (req, res) => {
       }
 });
 
-app.get('/api/get_now_playing', async (req, res) => { 
-      const song = await User.findOne({ username: 'test_user' }).populate('queue').exec().then(user => {
+app.get('/api/get_now_playing', async (req, res) => {
+      const song = await User.findById(getCurrentUser(req)).populate('queue').exec().then(user => {
             if (!user) {
                   res.status(404).send('User not found');
                   return;
@@ -347,8 +406,21 @@ app.get('/api/get_now_playing', async (req, res) => {
             res.status(500).send('Internal server error');
       });
 })
+app.get('/api/get_next_playing', async (req, res) => {
+      const song = await User.findById(getCurrentUser(req)).populate('queue').exec().then(user => {
+            if (!user) {
+                  res.status(404).send('User not found');
+                  return;
+            }
+            const nowPlaying = user.queue[user.posInQueue+1];
+            res.send(nowPlaying);
+      }).catch(err => {
+            console.error('Error fetching user:', err);
+            res.status(500).send('Internal server error');
+      });
+})
 app.get('/api/get_library', async (req, res) => {
-      const user = await User.findOne({ username: 'test_user' }).populate({path: 'playlists', populate: { path: 'songs' }}).exec();
+      const user = await User.findById(await getCurrentUser(req)).populate({path: 'playlists', populate: { path: 'songs' }}).exec();
       if (!user) {
             res.status(404).send('User not found');
             return;
@@ -363,7 +435,8 @@ app.get('/api/create_playlist', async (req, res) => {
             artworkPath: ''
       });
       await newPlaylist.save();
-      await User.findOneAndUpdate({ username: 'test_user' }, { $push: { playlists: newPlaylist._id } });
+      const user = await getCurrentUser(req);
+      await User.findByIdAndUpdate(user._id, { $push: { playlists: newPlaylist._id } });
       res.send('Playlist created');
 });
 app.get('/api/add_to_playlist', async (req, res) => {
@@ -385,7 +458,7 @@ app.get('/api/add_to_playlist', async (req, res) => {
 app.get('/', async (req, res) => {
       res.send('Hello from Ecostream!');
       //const result = await User.create({ 
-      //      username: 'test_user', 
+      //      username: 'Stefan', 
       //      password: 'password123'
       //});
 });
@@ -403,7 +476,9 @@ function sanitizePath(input) {
         // Remove leading/trailing dots and spaces
         .replace(/^[.\s]+|[.\s]+$/g, '')
         // Optional: limit to alphanumeric, dashes, and underscores
-        .replace(/[^a-z0-9._-]/gi, '');
+        .replace(/[^a-z0-9._-]/gi, '')
+        // Replace ?
+        .replace(/\?/g, '');
 }
 
 const downloadSong = async (artist, title, artworkUrl, albumName, addToPlaylist, addToQueue) => {
@@ -437,21 +512,21 @@ const downloadSong = async (artist, title, artworkUrl, albumName, addToPlaylist,
       // Check type, if not song then loop through top_result.more for the first song
       const link = 'https://www.youtube.com/watch?v=' + topResult.videoId;
       const dl = await import('./apis/downloadSong.mjs');
-      const result = await dl.downloadSong(link, title, artist, path.join(__dirname, '../music/'));
+      const result = await dl.downloadSong(link, sanitizePath(title), sanitizePath(artist), path.join(__dirname, '../music/'));
 
       // Save to MongoDB
       const newSong = new Song({
             title: title,
             artist: artist,
             duration: _duration,
-            songPath: path.join(`${title}-${artist}.mp3`),
+            songPath: path.join(`${sanitizePath(title)}-${sanitizePath(artist)}.mp3`),
             artworkPath: path.join(sanitizePath(`${albumName}-${artist}.jpg`)),
             isCache: addToQueue ? true : false
       });
       await newSong.save();
       if (addToPlaylist) {
             const playlist = await Playlist.findById(addToPlaylist);
-            const user = await User.findOne({ username: 'test_user' }).populate('queue').populate('queueSource').exec();
+            const user = await User.findById(await getCurrentUser(req)).populate('queue').populate('queueSource').exec();
             playlist.songs.push(newSong._id);
             playlist.save();
             if (user.queueSource && user.queueSource.Playlist && user.queueSource.Playlist.toString() === playlist._id.toString()) {
@@ -499,7 +574,7 @@ app.get('/api/download', async (req, res) => {
             existingSong.isCache = addToPlaylist ? false : existingSong.isCache;
             await existingSong.save();
             const playlist = await Playlist.findById(addToPlaylist);
-            const user = await User.findOne({ username: 'test_user' }).populate('queue').populate('queueSource').exec();
+            const user = await User.findById(await getCurrentUser(req)).populate('queue').populate('queueSource').exec();
             playlist.songs.push(existingSong._id);
             playlist.save();
             if (user.queueSource && user.queueSource.Playlist && user.queueSource.Playlist.toString() === playlist._id.toString()) {

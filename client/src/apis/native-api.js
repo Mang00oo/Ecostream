@@ -1,5 +1,8 @@
+import { Capacitor } from '@capacitor/core';
 let window;
 let electronAPI;
+
+let currentPlatform = "Web";
 
 export function init(_window) {
     window = _window;
@@ -13,6 +16,15 @@ export function init(_window) {
     } else {
         console.log('Running in browser');
     }
+}
+export function getPlatform() {
+    if (Capacitor.getPlatform() === 'ios' || Capacitor.getPlatform() === 'android') {
+        currentPlatform = "Capacitor";
+    }
+    return currentPlatform;
+}
+export function getDeviceName() {
+    return 'Browser';
 }
 export function subscribeToPlayEvent(callback) {
     if (electronAPI) {

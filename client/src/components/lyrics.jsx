@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Panel } from "react-resizable-panels";
 import { Client } from 'lrclib-api';
 import { FaPlay } from "react-icons/fa6";
+import { motion } from "motion/react";
 
 const client = new Client();
 
@@ -10,6 +11,7 @@ const Lyrics = ({song, setCenterContent, posInSong}) => {
     const [lastSong, setLastSong] = useState({});
     const [lyrics, setLyrics] = useState({});
     const [lastScrollTime, setLastScrollTime] = useState(0);
+    const [currentIndex, setCurrentIndex] = useState(0);
     const containerRef = useRef(null);
     useEffect(() => {
         if (song.title) {
@@ -33,15 +35,18 @@ const Lyrics = ({song, setCenterContent, posInSong}) => {
                 setLastSong(song);
             }
         }
-    }, [song]);
+    }, [song._id]);
     useEffect(() => {
         const difference = lastScrollTime + 4000 - Date.now();
         if (lyrics[0] && difference < 0) {
-            const currentIndex = lyrics.findIndex(line => line.startTime > posInSong) - 1;
-            const currentLine = containerRef.current.children[currentIndex];
+            const _currentIndex = lyrics.findIndex(line => line.startTime > posInSong) - 1;
+            setCurrentIndex(_currentIndex);
+            const currentLine = containerRef.current.children[_currentIndex];
             if (currentLine) {
                 currentLine.scrollIntoView({ behavior: 'smooth', block: 'center',  });
             }
+        } else {
+            setCurrentIndex(-1);
         }
     }, [posInSong]);
 
@@ -55,8 +60,21 @@ const Lyrics = ({song, setCenterContent, posInSong}) => {
             <button className="CenterCloseButton" onClick={() => setCenterContent('none')}> X </button>
             <div className="lyrics-container" ref={containerRef} onWheel={handleScroll} onTouchMove={handleScroll} onScroll={handleScroll}>
                 {lyrics[0] ? lyrics.map((line, index) => 
-                <p key={index} className={line.current ? 'current-lyric' : ''}> {line.startTime < posInSong && posInSong < lyrics[index + 1]?.startTime && <FaPlay />} {line.text} </p>) : 
-                    <p> Loading Lyrics... </p>
+                <motion.p
+                    key={index}
+                    className="Lyrics"
+                    animate= {{
+                        scale: currentIndex == -1 ? 1 : Math.max(0.4, 1-(Math.abs(currentIndex-index)/6))
+                    }}
+                    transition={{
+                        duration: 0.8,
+                        ease: [0, 0.71, 0.2, 1.01],
+                    }}
+                    >
+                
+                    {line.startTime < posInSong && posInSong < lyrics[index + 1]?.startTime && <FaPlay />} {line.text} 
+                </motion.p>) : 
+                    <p className="Lyrics"> Loading Lyrics... </p>
                 }
             </div>
         </Panel>

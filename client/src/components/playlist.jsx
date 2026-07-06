@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Panel } from "react-resizable-panels";
 import * as serverApi from '../apis/server-api';
-import { FaPlus, FaPlay, FaShuffle } from "react-icons/fa6";
+import { FaPlay, FaShuffle } from "react-icons/fa6";
 import { HiMiniSparkles } from "react-icons/hi2";
 import { IoClose } from "react-icons/io5";
 import * as ListItemCreator from './list-items';
@@ -52,9 +52,8 @@ const Playlist = ({data, playCallback, setCenterContent}) => {
     }, [data]);
     return(
         <Panel defaultSize={40} minSize={'40%'} className="panel">
-            <h2>Playlist</h2>
             <button className="CenterCloseButton" onClick={() => setCenterContent('none')}> <IoClose /> </button>
-            <img className="playlist-image" src={data.artworkPath ? 'http://localhost:8080/media/' + data.artworkPath : 'https://placehold.co/300x300?text=' + data.name} alt="Playlist cover" />
+            <img className="playlist-image" src={data.artworkPath ? serverApi.getMediaUrl() + data.artworkPath : 'https://placehold.co/300x300?text=' + data.name} alt="Playlist cover" />
             <div className="playlist-details">
                 <h3> {data.name} </h3>
                 <p> {data.songs.length} songs </p>

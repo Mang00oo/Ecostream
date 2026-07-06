@@ -1,6 +1,8 @@
 import axios from 'axios';
 import { io } from "socket.io-client";
 import toast from 'react-hot-toast';
+import { CapacitorHttp } from '@capacitor/core';
+axios.defaults.adapter = 'fetch'; 
 
 const SERVER_API_URL = 'http://100.90.153.39:8080/';
 
@@ -23,7 +25,6 @@ export function subscribeToPlayEvent(callback) {
         await callback(data.isPlaying);
     });
 }
-var isLoggedIn = false;
 axios.interceptors.request.use(config => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -36,12 +37,11 @@ axios.interceptors.request.use(config => {
 export async function checkLogin() {
     if (localStorage.getItem('token')) {
         const params = { token: localStorage.getItem('token') };
-        const response = await axios.get(SERVER_API_URL + 'login', { params: params });
+        const response = await axios.get(SERVER_API_URL + 'auth/login', { params: params });
         if (response.data.success) {
-            isLoggedIn = true;
             console.log(response.data.userID);
             localStorage.setItem('token', response.data.token);
-            return true;
+            return {success: true, userID: response.data.userID};
         } else {
             localStorage.removeItem('token');
             return false;
@@ -52,15 +52,28 @@ export async function checkLogin() {
 }
 export async function login(password) {
     const params = { password: password };
-    const response = await axios.get(SERVER_API_URL + 'login', { params: params });
+    const response = await axios.get(SERVER_API_URL + 'auth/login', { params: params });
     if (response.data.success) {
-        isLoggedIn = true;
         localStorage.setItem('token', response.data.token);
-        return true;
+        return {success: true, userID: response.data.userID};
     } else {
         localStorage.removeItem('token');
         return false;
     }
+}
+export async function loginAsUser(_id, pwd) {
+    const params = { userID: _id, password: pwd }
+    console.log('Params: ');
+    console.log(params);
+    const response = await axios.get(SERVER_API_URL + 'api/login_as_user', { params: params });
+    if (response.data.success) {
+        localStorage.setItem('token', response.data.token);
+    }
+    return response.data;
+}
+export async function getUsers() {
+    const response = await axios.get(SERVER_API_URL + 'api/get_users');
+    return response.data;
 }
 
 export async function addStreamedSong(artist, title, artwork) {
@@ -91,6 +104,10 @@ export async function setShuffle(shuffleType) {
 }
 export async function getNowPlaying() {
     const response = await axios.get(SERVER_API_URL + 'api/get_now_playing');
+    return response.data;
+}
+export async function getNextPlaying() {
+    const response = await axios.get(SERVER_API_URL + 'api/get_next_playing');
     return response.data;
 }
 export async function getQueue() {

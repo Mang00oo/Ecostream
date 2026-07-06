@@ -40,11 +40,11 @@ export function CreateLibraryItem({ playlist, callback }) {
     callback(playlist);
   }
   return (
-    <div className="library-item" onClick={handleClick}>
+    <motion.div className="library-item" onClick={handleClick} whileHover={{ scale: 1.05 }}>
       <img src={image} onerror="this.onerror=null; this.src='https://placehold.co/300x300?text=No+Image';" alt="Playlist Image"></img>
       <h3> {playlist.name} </h3>
       <p> {songCount} songs</p>
-    </div>
+    </motion.div>
   )
 }
 

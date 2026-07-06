@@ -1,22 +1,18 @@
-import axios from 'axios';
 import './App.css';
 import AudioPlayer from 'react-h5-audio-player';
-import './AudioPlayer.css';
-import * as lastfm from './apis/last-fm';
-import * as ListItemCreator from './components/list-items';
 import * as serverApi from './apis/server-api';
 import NowPlaying from './components/now-playing';
 import React, { useState, useEffect, useRef } from "react";
-import { Group, Panel } from "react-resizable-panels";
-import Popup from 'reactjs-popup';
+import { Group } from "react-resizable-panels";
 import LibraryList from './components/library-list';
 import Playlist from './components/playlist';
 import SearchResults from './components/search-results';
 import Queue from './components/queue';
 import Lyrics from './components/lyrics';
 import Login from './components/login';
-
-import { motion } from 'motion/react';
+import Player from './components/player';
+import NavigationDock from './components/navigation-dock';
+import { KeepAwake } from '@capacitor-community/keep-awake';
 import * as nativeApi from './apis/native-api';
 import { FaSearch } from "react-icons/fa";
 import { Toaster } from 'react-hot-toast';
@@ -26,7 +22,6 @@ import { Toaster } from 'react-hot-toast';
 let clickedSong = {};
 
 function App() {
-  const [listItems, setListItems] = useState([]);
 
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -39,11 +34,19 @@ function App() {
   const [isSignedIn, setIsSignedIn] = useState(false);
   
   const [useAutoPlay, setUseAutoPlay] = useState(false);
-  const [libraryItems, setLibraryItems] = useState(null);
   const [libraryReload, setLibraryReload] = useState(0);
-  const [popupLibraryItems, setPopupLibraryItems] = useState([]);
-  const [openPlaylist, setOpenPlaylist] = useState(null);
   const [playlistPopupOpen, setPlaylistPopupOpen] = useState(false);
+
+  const useIsMobile = (breakpoint = 768) => {
+    const [isMobile, setIsMobile] = useState(window.innerWidth < breakpoint);
+    useEffect(() => {
+      const handleResize = () => setIsMobile(window.innerWidth < breakpoint);
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }, [breakpoint]);
+    return isMobile;
+  };
+  const isMobile = useIsMobile();
 
   const player = useRef(null);
   const library = useRef(null);
@@ -53,18 +56,11 @@ function App() {
     const response = await serverApi.getNowPlaying();
     setNowPlaying(response);
   }
-  const populateLibrary = async() => { 
-    const playlists = await serverApi.getLibrary();
-    setLibraryItems(playlists);
-
-    setPopupLibraryItems(playlists);
-
-  };
   useEffect(() => {
     nativeApi.init(window);
     async function login() {
-      const success = await serverApi.checkLogin();
-      setIsSignedIn(success);
+      const result = await serverApi.checkLogin();
+      setIsSignedIn(result.success);
     }
     login()
     
@@ -82,33 +78,24 @@ function App() {
     }
     nativeApi.subscribeToPlayEvent(playEventCallback);
     serverApi.subscribeToPlayEvent(playEventCallback);
+
+    async function keepAwake() {
+      if (await KeepAwake.isSupported.isSupported) {
+        await KeepAwake.keepAwake();
+      }
+    }
+    keepAwake();
+
   }, []);
   useEffect(() => {
     if (isSignedIn) {
       getNowPlaying();
-      populateLibrary();
     }
   }, [isSignedIn]);
 
   const createPlaylist = async () => {
     const response = await serverApi.createPlaylist('New Playlist');
     console.log(response);
-    await populateLibrary();
-  }
-
-  const nextSong = async () => {
-    console.log('Next song');
-    const response = await serverApi.controlQueue('next');
-    setUseAutoPlay(true);
-    setNowPlaying(response);
-    serverApi.startPlayingOnAllClients();
-  }
-  const prevSong = async () => {
-    console.log('Previous song');
-    const response = await serverApi.controlQueue('prev');
-    setUseAutoPlay(true);
-    setNowPlaying(response);
-    serverApi.startPlayingOnAllClients();
   }
   const playSong = async (response) => {
     setUseAutoPlay(true);
@@ -145,7 +132,6 @@ function App() {
     setPlaylistPopupOpen(false);
     const response = await serverApi.downloadSong(clickedSong);
     const response2 = await serverApi.addToPlaylist(playlist._id, response._id);
-    populateLibrary();
   }
   const closePopup = () => setPlaylistPopupOpen(false);
 
@@ -181,53 +167,68 @@ function App() {
         <title>Ecostream</title>
         {isSignedIn &&
         <>
-        <div className="top-bar">
-          <form className="search-form" onSubmit={(e) => { e.preventDefault(); search(); }}>
-            <input
-              type="text"
-              placeholder="Search library..."
-              value={searchQuery}
-              onChange={handleInputChange}
-            />
-            <button><FaSearch /></button>
-          </form>
-          <button className="PlayButton2"> User </button>
-        </div>
-        
-        <Group className="grid">
-          <LibraryList centerContent={changeCenterContent} setData={setCenterContentData} refreshTrigger={libraryReload} ref={library}></LibraryList>
+        {!isMobile &&
+          <div className="top-bar">
+            <form className="search-form" onSubmit={(e) => { e.preventDefault(); search(); }}>
+              <input
+                type="text"
+                placeholder="Search library..."
+                value={searchQuery}
+                onChange={handleInputChange}
+              />
+              <button><FaSearch /></button>
+            </form>
+            <button className="PlayButton2"> User </button>
+          </div>
+        }
+        {isMobile && 
+          <Group className="grid"> 
+            {centerContent=='none' &&
+              <NowPlaying song={nowPlaying} setCenterContent={changeCenterContent} ></NowPlaying>
+            }
+            {centerContent=='library' &&
+              <LibraryList centerContent={changeCenterContent} setData={setCenterContentData} refreshTrigger={libraryReload} ref={library}></LibraryList>
+            }
+            {centerContent=='playlist' && (
+              <Playlist data={centerContententData} playCallback={playSong} setCenterContent={changeCenterContent}></Playlist>
+            )}
+            {centerContent=='search' && (
+              <SearchResults searchQuery={searchQuery} ref={searchResultsRef} onLibraryUpdated={() => setLibraryReload((prev) => prev + 1)} setCenterContent={changeCenterContent}></SearchResults>
+            )}
+            {centerContent=='queue' && (
+              <Queue playCallback={playSong} setCenterContent={changeCenterContent} reverseCenterContent={reverseCenterContent}></Queue>
+            )}
+            {centerContent=='lyrics' && (
+              <Lyrics song={nowPlaying} setCenterContent={changeCenterContent} posInSong={posInSong}></Lyrics>
+            )}
+            
+          </Group>
+        }
 
-          {centerContent=='playlist' && (
-            <Playlist data={centerContententData} playCallback={playSong} setCenterContent={changeCenterContent}></Playlist>
-          )}
-          {centerContent=='search' && (
-            <SearchResults searchQuery={searchQuery} ref={searchResultsRef} onLibraryUpdated={() => setLibraryReload((prev) => prev + 1)} setCenterContent={changeCenterContent}></SearchResults>
-          )}
-          {centerContent=='queue' && (
-            <Queue playCallback={playSong} setCenterContent={changeCenterContent} reverseCenterContent={reverseCenterContent}></Queue>
-          )}
-          {centerContent=='lyrics' && (
-            <Lyrics song={nowPlaying} setCenterContent={changeCenterContent} posInSong={posInSong}></Lyrics>
-          )}
+        {!isMobile &&
+          <Group className="grid">
+            <LibraryList centerContent={changeCenterContent} setData={setCenterContentData} refreshTrigger={libraryReload} ref={library}></LibraryList>
 
-          <NowPlaying song={nowPlaying} setCenterContent={changeCenterContent} ></NowPlaying>
-        </Group>
-          
-        <AudioPlayer
-              className='audio-player'
-              src= {!nowPlaying.isStream ? serverApi.getMediaUrl() + nowPlaying.songPath : 'http://localhost:8080/api/get_song_stream?videoId=' + nowPlaying.songPath}
-              onClickNext={nextSong}
-              onClickPrevious={prevSong}
-              onEnded={nextSong}
-              onPlay={serverApi.startPlayingOnAllClients}
-              onPause={serverApi.stopPlayingOnAllClients}
-              onListen={(e) => setPosInSong(e.target.currentTime)}
-              autoPlay={useAutoPlay}
-              showJumpControls={false}
-              showSkipControls={true}
-              ref={player}
-              // other props here
-          />
+            {centerContent=='playlist' && (
+              <Playlist data={centerContententData} playCallback={playSong} setCenterContent={changeCenterContent}></Playlist>
+            )}
+            {centerContent=='search' && (
+              <SearchResults searchQuery={searchQuery} ref={searchResultsRef} onLibraryUpdated={() => setLibraryReload((prev) => prev + 1)} setCenterContent={changeCenterContent}></SearchResults>
+            )}
+            {centerContent=='queue' && (
+              <Queue playCallback={playSong} setCenterContent={changeCenterContent} reverseCenterContent={reverseCenterContent}></Queue>
+            )}
+            {centerContent=='lyrics' && (
+              <Lyrics song={nowPlaying} setCenterContent={changeCenterContent} posInSong={posInSong}></Lyrics>
+            )}
+
+            <NowPlaying song={nowPlaying} ></NowPlaying>
+          </Group>
+        }
+        <Player song={nowPlaying} setSong={setNowPlaying} setPosInSong={setPosInSong} setCenterContent={changeCenterContent} isMobile={isMobile}/>
+        {isMobile &&
+          <NavigationDock setCenterContent={changeCenterContent} />
+        }
         </>
         }
         {!isSignedIn &&

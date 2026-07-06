@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Ecostream</string>
+    <string name="title_activity_main">Ecostream</string>
+    <string name="package_name">com.mang0o.ecostream</string>
+    <string name="custom_url_scheme">com.mang0o.ecostream</string>
+</resources>

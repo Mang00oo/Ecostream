@@ -1,5 +1,5 @@
 {
-  "name": "desktop",
+  "name": "Ecostream",
   "version": "1.0.0",
   "description": "A desktop app for Ecostream",
   "license": "ISC",
@@ -8,9 +8,16 @@
   "main": "index.js",
   "scripts": {
     "start": "electron .",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "make": "electron-forge make"
   },
   "devDependencies": {
     "electron": "^41.3.0"
+  },
+  "dependencies": {
+    "@electron-forge/cli": "^7.11.1",
+    "@electron-forge/core": "^7.11.1",
+    "@electron-forge/maker-dmg": "^7.11.1",
+    "@electron-forge/maker-squirrel": "^7.11.1"
   }
 }

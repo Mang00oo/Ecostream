@@ -1,5 +1,7 @@
 :root {
   --background-image: url(https://everwallpaper.com/cdn/shop/products/1034.jpg?v=1658817868&width=1946);
+  --isMobile: 0px;
+  -webkit-tap-highlight-color: transparent;
 }
 .background-image {
   position: fixed;
@@ -20,6 +22,30 @@
 }
 div {
   color: white;
+  scrollbar-color: rgba(255, 255, 255, 0.5) transparent;
+  scrollbar-width: none;
+  
+}
+button {
+  box-shadow: 2px, 2px, 6px, black;
+}
+p {
+  filter: drop-shadow(0px 2px 6px black);
+}
+h2 {
+  filter: drop-shadow(0px 2px 6px black);
+}
+h3 {
+  filter: drop-shadow(0px 2px 6px black);
+}
+img {
+  filter: drop-shadow(0px 2px 6px black);
+}
+.drop-shadow {
+  filter: drop-shadow(0px 2px 6px black);
+}
+div::-webkit-scrollbar {
+  display: none;
 }
 .center {
   position: absolute;
@@ -85,28 +111,22 @@ input::placeholder {
   display: flex;
   -webkit-app-region: no-drag;
 }
-.audio-player {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-}
 
 .grid {
   padding: 0px;
-  min-height: calc(100vh - 170px);
-  max-height: calc(100vh - 170px);
+  min-height: calc(100vh - 170px - var(--isMobile));
+  max-height: calc(100vh - 170px - var(--isMobile));
 }
 
 .panel {
   border-radius: 10px;
   padding: 10px;
+  padding-top: 13px;
   margin: 5px;
   color: white;
   background-color: rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(18px);
   overflow-y: scroll;
-  filter: drop-shadow(5px, 5px, 10px, black);
   perspective: 800px;
 }
 
@@ -223,7 +243,7 @@ a {
 }
 
 .playlist-image {
-  width: 40%;
+  height: 150px;
   margin-left:6px;
   margin-right:8px;
   border-radius: 10px;
@@ -336,4 +356,12 @@ a {
   color: white;
   text-align: center;
   -webkit-animation: anvil 0.3s cubic-bezier(0.38, 0.1, 0.36, 0.9) forwards;
+}
+.Lyrics {
+  width: 100%;
+  text-align: center;
+  font-size: 20px;
+}
+.lyrics-container {
+  justify-content: center;
 }

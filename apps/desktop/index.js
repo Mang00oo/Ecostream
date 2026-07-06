@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, TouchBar } = require('electron/main')
+const { app, BrowserWindow, ipcMain, TouchBar, nativeImage } = require('electron/main')
 
 const { TouchBarLabel, TouchBarButton, TouchBarSpacer } = TouchBar
 
@@ -8,9 +8,11 @@ let mainWindow;
 
 const createWindow = () => {
   mainWindow = new BrowserWindow({
-    width: 800,
+    width: 1000,
     height: 600,
     title: "Ecostream",
+
+    
 
     frame: false,
     titleBarStyle: 'hiddenInset',
@@ -65,7 +67,6 @@ app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 
 app.whenReady().then(() => {
   createWindow()
-
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow()

@@ -1,0 +1,18 @@
+.navigation-dock {
+  position: fixed;
+  display: flex;
+  left: 0;
+  right: 0;
+  width: calc(100%-10px);
+  height: 35px;
+  border-radius: 10px;
+  padding: 10px;
+  margin: 5px;
+  margin-bottom: 0px;
+  background-color: rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(18px);
+  bottom: 10px;
+  box-shadow: 0 0 3px 0 rgba(0, 0, 0, 0.2);
+  justify-content: center;
+  align-items: center;
+}
