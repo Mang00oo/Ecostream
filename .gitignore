@@ -3,4 +3,4 @@ server/node_modules/
 client/node_modules/
 apps/desktop/node_modules/
 apps/desktop/out/
-server/credentials.env/
+server/credentials.env
