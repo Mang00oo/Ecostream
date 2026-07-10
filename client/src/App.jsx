@@ -184,7 +184,7 @@ function App() {
         {isMobile && 
           <Group className="grid"> 
             {centerContent=='none' &&
-              <NowPlaying song={nowPlaying} setCenterContent={changeCenterContent} ></NowPlaying>
+              <NowPlaying song={nowPlaying} setCenterContent={changeCenterContent} isMobile={isMobile} ></NowPlaying>
             }
             {centerContent=='library' &&
               <LibraryList centerContent={changeCenterContent} setData={setCenterContentData} refreshTrigger={libraryReload} ref={library}></LibraryList>
@@ -222,7 +222,7 @@ function App() {
               <Lyrics song={nowPlaying} setCenterContent={changeCenterContent} posInSong={posInSong}></Lyrics>
             )}
 
-            <NowPlaying song={nowPlaying} ></NowPlaying>
+            <NowPlaying song={nowPlaying} setCenterContent={changeCenterContent} isMobile={isMobile} ></NowPlaying>
           </Group>
         }
         <Player song={nowPlaying} setSong={setNowPlaying} setPosInSong={setPosInSong} setCenterContent={changeCenterContent} isMobile={isMobile}/>

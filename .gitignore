@@ -1,5 +1,6 @@
 /music
-/server/node_modules
-/client/node_modules
-/apps/desktop/node_modules
-/server/credentials.env
+server/node_modules/
+client/node_modules/
+apps/desktop/node_modules/
+apps/desktop/out/
+server/credentials.env/

@@ -2,6 +2,7 @@
   --background-image: url(https://everwallpaper.com/cdn/shop/products/1034.jpg?v=1658817868&width=1946);
   --isMobile: 0px;
   -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
 }
 .background-image {
   position: fixed;

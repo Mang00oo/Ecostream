@@ -23,6 +23,7 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
     const [duration, setDuration] = useState(0);
     const [pos, setPos] = useState(0);
     const playerRef = useRef(null);
+    const seekbarRef = useRef(null);
 
     function updateMetadata(_song) {
         MediaSession.setMetadata({
@@ -113,6 +114,14 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
         const seconds = Math.floor(timeInSeconds % 60);
         return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
     }
+    function updateSeekbarGradient() {
+        if (!seekbarRef) return;
+        const newTime = seekbarRef.current.value;
+        const min = parseInt(seekbarRef.current.min || 0);
+        const max = parseInt(seekbarRef.current.max || 100);
+        const percentage = ((newTime - min) / (max - min)) * 100;
+        seekbarRef.current.style.background = `linear-gradient(to right, #ffffff 0%, #ffffff ${percentage}%, #ffffff3e ${percentage}%, #ffffff3e 100%)`;
+    }
 
     useEffect(()=> {
         updateMetadata(song);
@@ -150,6 +159,7 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
                 MediaSession.setPositionState({position: e.target.currentTime, duration: e.target.duration});
                 setDuration(e.target.duration);
                 setPos(e.target.currentTime);
+                updateSeekbarGradient();
             }
         });
         player.addEventListener("canplay", (e) => {
@@ -167,22 +177,42 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
     }, [])
     return(
         <div className="audio-player" onClick={()=>{if(isMobile) setCenterContent('none')}} style={{bottom: isMobile?"77px":"10px"}}>
-            <div className="player-details">
+            <img src={serverApi.getMediaUrl() + nextSong.artworkPath} style={{position:'absolute', height:'0px'}}></img>
+            <motion.div 
+                className="player-details"
+                drag={isMobile? 'x' : null}
+                whileDrag={{scale: 0.7, opacity: 0.8}}
+                dragSnapToOrigin
+                onDragEnd={(event, info)=>{
+                    if (info.offset.x > 80) {
+                        prevSong();
+                    } else if (info.offset.x < -80) {
+                        skipSong();
+                    }
+                }}
+            >
                 <img src={serverApi.getMediaUrl() + song.artworkPath} className="player-image" crossOrigin="anonymous"></img>
                 <div className="player-details-text">
                     <h3>{song.title}</h3>
                     <p>{song.artist}</p>
                 </div>
-            </div>
+            </motion.div>
             
             <div className="player-controls">
-                <div className="player-buttons-container">
-                    <motion.button className="PlayButton" onClick={prevSong} whileHover={{ scale: 1.1 }} > <IoPlaySkipBack /> </motion.button>
+                <div className="player-buttons-container" style={isMobile? {position: 'absolute', top: '25px', right: '15px'} : {}}>
+                    {!isMobile &&
+                        <motion.button className="PlayButton" onClick={prevSong} whileHover={{ scale: 1.1 }} > <IoPlaySkipBack /> </motion.button>
+                    }
                     <motion.button className="PlayButton" onClick={()=>togglePlayback(!isPlaying)} whileHover={{ scale: 1.1 }} > {isPlaying ? <FaPause /> : <FaPlay />} </motion.button>
-                    <motion.button className="PlayButton" onClick={skipSong} whileHover={{ scale: 1.1 }} > <IoPlaySkipForward /> </motion.button>
+                    {!isMobile &&
+                        <motion.button className="PlayButton" onClick={skipSong} whileHover={{ scale: 1.1 }} > <IoPlaySkipForward /> </motion.button>
+                    }
+                    
                 </div>
                 <div className="player-seek">
-                    <span>{formatTime(pos)}</span>
+                    {!isMobile && 
+                        <span>{formatTime(pos)}</span>
+                    }
                     <input 
                         type="range"
                         min="0"
@@ -194,21 +224,26 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
                             if (playerRef.current != null) {
                                 playerRef.current.seekToTime(newTime);
                             }
+                            updateSeekbarGradient();
                         }}
-                        className="player-posSeek"
+                        className={isMobile? "player-seek-mobile" : "player-seek-desktop"}
+                        ref={seekbarRef}
                     ></input>
-                    <span>{formatTime(duration)}</span>
+                    {!isMobile &&
+                        <span>{formatTime(duration)}</span>
+                    }
                 </div>
-                
             </div>
-            <div className="player-navigation-container">
-                <motion.button className="PlayButton" onClick={() => setCenterContent('queue')} whileHover={{ scale: 1.1 }}>
-                        <HiMiniQueueList />
-                </motion.button>
-                <motion.button className="PlayButton" onClick={() => {setCenterContent('lyrics');}} whileHover={{ scale: 1.1 }}>
-                    <FaMicrophone />
-                </motion.button>
-            </div>
+            {!isMobile &&
+                <div className="player-navigation-container">
+                    <motion.button className="PlayButton" onClick={() => setCenterContent('queue')} whileHover={{ scale: 1.1 }}>
+                            <HiMiniQueueList />
+                    </motion.button>
+                    <motion.button className="PlayButton" onClick={() => {setCenterContent('lyrics');}} whileHover={{ scale: 1.1 }}>
+                        <FaMicrophone />
+                    </motion.button>
+                </div>
+            }
             
         </div>
     );
