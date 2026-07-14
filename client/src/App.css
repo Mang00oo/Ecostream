@@ -292,6 +292,7 @@ a {
   backdrop-filter: blur(10px);
   align-items: center;
   display: flex;
+  -webkit-app-region: no-drag;
 }
 .PlayButton2 {
   bottom: 10px;
@@ -307,6 +308,7 @@ a {
   align-items: center;
   display: flex;
   margin-bottom: 10px;
+  -webkit-app-region: no-drag;
 }
 
 .NewPlaylistButton {

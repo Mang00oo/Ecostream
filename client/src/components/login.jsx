@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import * as serverApi from "../apis/server-api";
 import toast from "react-hot-toast"
 
-const Login = ({setSignedIn}) => {
+const Login = ({setSignedIn, signedInState}) => {
     const [input, setInput] = useState('');
     const [user, setUser] = useState('');
     const [users, setUsers] = useState([]);
@@ -17,7 +17,7 @@ const Login = ({setSignedIn}) => {
             const result = await serverApi.loginAsUser(clickedUser, input);
             console.log(result);
             if (result.success) {
-                setSignedIn(true);
+                setSignedIn('true');
                 toast.success("Signed in successfully!");
             } else {
                 toast.error("Failed to sign in.");
@@ -27,7 +27,7 @@ const Login = ({setSignedIn}) => {
             if (result.success) {
                 setUser(result.userID);
                 if (result.userID !== 'none') {
-                    setSignedIn(true);
+                    setSignedIn('true');
                 } else {
                     const users = await serverApi.getUsers();
                     setUsers(users);
@@ -48,10 +48,32 @@ const Login = ({setSignedIn}) => {
             setShowLoginInput(false);
             const result = await serverApi.loginAsUser(usr._id, '');
             if (result.success) {
-                setSignedIn(true);
+                setSignedIn('true');
             }
         }
     }
+    useEffect(() => {
+        //localStorage.removeItem('token');
+        async function login() {
+            const result = await serverApi.checkLogin();
+            if (result.userId != 'none') {
+                if (result.success == true) {
+                    setSignedIn('true');
+                }
+            }
+        }
+        async function updateUsers() {
+            const users = await serverApi.getUsers();
+            setUsers(users);
+        }
+        if (signedInState == 'loggedOut') {
+            setUser('none');
+            updateUsers();
+        } else {
+            login();
+        }
+        
+    }, []);
     return (
         <div className="center">
             {user == 'none' &&

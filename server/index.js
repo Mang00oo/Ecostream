@@ -521,12 +521,12 @@ const downloadSong = async (artist, title, artworkUrl, albumName, addToPlaylist,
             duration: _duration,
             songPath: path.join(`${sanitizePath(title)}-${sanitizePath(artist)}.mp3`),
             artworkPath: path.join(sanitizePath(`${albumName}-${artist}.jpg`)),
-            isCache: addToQueue ? true : false
+            isCache: false
       });
       await newSong.save();
       if (addToPlaylist) {
             const playlist = await Playlist.findById(addToPlaylist);
-            const user = await User.findById(await getCurrentUser(req)).populate('queue').populate('queueSource').exec();
+            const user = await User.findById(addToQueue).populate('queue').populate('queueSource').exec();
             playlist.songs.push(newSong._id);
             playlist.save();
             if (user.queueSource && user.queueSource.Playlist && user.queueSource.Playlist.toString() === playlist._id.toString()) {
@@ -568,7 +568,7 @@ app.get('/api/download', async (req, res) => {
       const artworkUrl = req.query.artworkUrl;
       const albumName = req.query.albumName;
       const addToPlaylist = req.query.addToPlaylist; // id of playlist
-      const addToQueue = req.query.addToQueue; // id of user for queue
+      let addToQueue = req.query.addToQueue; // id of user for queue
       const existingSong = await Song.findOne({ title: title, artist: artist });
       if (existingSong) {
             existingSong.isCache = addToPlaylist ? false : existingSong.isCache;
@@ -589,6 +589,9 @@ app.get('/api/download', async (req, res) => {
             res.send(existingSong);
             console.log('Adding song');
             return;
+      }
+      if (!addToQueue) {
+            addToQueue = await getCurrentUser(req);
       }
       const newSong = await downloadSong(artist, title, artworkUrl, albumName, addToPlaylist, addToQueue);
       

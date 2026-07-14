@@ -52,7 +52,6 @@ const Playlist = ({data, playCallback, setCenterContent}) => {
     }, [data]);
     return(
         <Panel defaultSize={40} minSize={'40%'} className="panel">
-            <button className="CenterCloseButton" onClick={() => setCenterContent('none')}> <IoClose /> </button>
             <img className="playlist-image" src={data.artworkPath ? serverApi.getMediaUrl() + data.artworkPath : 'https://placehold.co/300x300?text=' + data.name} alt="Playlist cover" />
             <div className="playlist-details">
                 <h3> {data.name} </h3>

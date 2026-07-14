@@ -14,7 +14,7 @@ import Player from './components/player';
 import NavigationDock from './components/navigation-dock';
 import { KeepAwake } from '@capacitor-community/keep-awake';
 import * as nativeApi from './apis/native-api';
-import { FaSearch } from "react-icons/fa";
+import { FaSearch, FaUser } from "react-icons/fa";
 import { Toaster } from 'react-hot-toast';
 
 // npm start to run frontend
@@ -31,7 +31,7 @@ function App() {
   const [centerContententData, setCenterContentData] = useState({});
   const [nowPlaying, setNowPlaying] = useState({});
   const [posInSong, setPosInSong] = useState(0);
-  const [isSignedIn, setIsSignedIn] = useState(false);
+  const [isSignedIn, setIsSignedIn] = useState('false');
   
   const [useAutoPlay, setUseAutoPlay] = useState(false);
   const [libraryReload, setLibraryReload] = useState(0);
@@ -58,11 +58,6 @@ function App() {
   }
   useEffect(() => {
     nativeApi.init(window);
-    async function login() {
-      const result = await serverApi.checkLogin();
-      setIsSignedIn(result.success);
-    }
-    login()
     
     const playEventCallback = async(isPlaying) => {
       console.log('Received play event from server: ' + isPlaying);
@@ -88,7 +83,7 @@ function App() {
 
   }, []);
   useEffect(() => {
-    if (isSignedIn) {
+    if (isSignedIn == 'true') {
       getNowPlaying();
     }
   }, [isSignedIn]);
@@ -165,7 +160,7 @@ function App() {
       <div style={nowPlaying?.artworkPath ? {'--background-image': `url('${serverApi.getMediaUrl()}${nowPlaying.artworkPath}')`} : {}} className="background-image"></div>
       <header className="App-header">
         <title>Ecostream</title>
-        {isSignedIn &&
+        {isSignedIn=='true' &&
         <>
         {!isMobile &&
           <div className="top-bar">
@@ -178,7 +173,7 @@ function App() {
               />
               <button><FaSearch /></button>
             </form>
-            <button className="PlayButton2"> User </button>
+            <button className="PlayButton" onClick={()=>{setIsSignedIn('loggedOut')}}> <FaUser /> </button>
           </div>
         }
         {isMobile && 
@@ -227,12 +222,12 @@ function App() {
         }
         <Player song={nowPlaying} setSong={setNowPlaying} setPosInSong={setPosInSong} setCenterContent={changeCenterContent} isMobile={isMobile}/>
         {isMobile &&
-          <NavigationDock setCenterContent={changeCenterContent} />
+          <NavigationDock setCenterContent={changeCenterContent} setSignedIn={setIsSignedIn}/>
         }
         </>
         }
-        {!isSignedIn &&
-          <Login setSignedIn={setIsSignedIn}/>
+        {isSignedIn!='true' &&
+          <Login setSignedIn={setIsSignedIn} signedInState={isSignedIn}/>
         }
         
         
