@@ -9,6 +9,7 @@ import Playlist from './components/playlist';
 import SearchResults from './components/search-results';
 import Queue from './components/queue';
 import Lyrics from './components/lyrics';
+import DeviceSelect from './components/device-select';
 import Login from './components/login';
 import Player from './components/player';
 import NavigationDock from './components/navigation-dock';
@@ -72,7 +73,6 @@ function App() {
       }
     }
     nativeApi.subscribeToPlayEvent(playEventCallback);
-    serverApi.subscribeToPlayEvent(playEventCallback);
 
     async function keepAwake() {
       if (await KeepAwake.isSupported.isSupported) {
@@ -99,8 +99,6 @@ function App() {
     if (response) {
       await setNowPlaying(response);
     }
-    
-    serverApi.startPlayingOnAllClients();
   }
   const handleInputChange = (event) => {
     setSearchQuery(event.target.value);
@@ -157,7 +155,7 @@ function App() {
             },
           }}
       />
-      <div style={nowPlaying?.artworkPath ? {'--background-image': `url('${serverApi.getMediaUrl()}${nowPlaying.artworkPath}')`} : {}} className="background-image"></div>
+      <div style={nowPlaying?.artworkPath ? {'--background-image': `url('${serverApi.getImageUrl(nowPlaying.artworkPath)}')`} : {}} className="background-image"></div>
       <header className="App-header">
         <title>Ecostream</title>
         {isSignedIn=='true' &&
@@ -179,10 +177,10 @@ function App() {
         {isMobile && 
           <Group className="grid"> 
             {centerContent=='none' &&
-              <NowPlaying song={nowPlaying} setCenterContent={changeCenterContent} isMobile={isMobile} ></NowPlaying>
+              <NowPlaying song={nowPlaying} setCenterContent={changeCenterContent} isMobile={isMobile} onLibraryUpdated={() => setLibraryReload((prev) => prev + 1)}></NowPlaying>
             }
             {centerContent=='library' &&
-              <LibraryList centerContent={changeCenterContent} setData={setCenterContentData} refreshTrigger={libraryReload} ref={library}></LibraryList>
+              <LibraryList currentData={centerContententData} centerContent={changeCenterContent} setData={setCenterContentData} refreshTrigger={libraryReload} ref={library}></LibraryList>
             }
             {centerContent=='playlist' && (
               <Playlist data={centerContententData} playCallback={playSong} setCenterContent={changeCenterContent}></Playlist>
@@ -191,10 +189,13 @@ function App() {
               <SearchResults searchQuery={searchQuery} ref={searchResultsRef} onLibraryUpdated={() => setLibraryReload((prev) => prev + 1)} setCenterContent={changeCenterContent}></SearchResults>
             )}
             {centerContent=='queue' && (
-              <Queue playCallback={playSong} setCenterContent={changeCenterContent} reverseCenterContent={reverseCenterContent}></Queue>
+              <Queue playCallback={playSong} reverseCenterContent={reverseCenterContent} currentSong={nowPlaying}></Queue>
             )}
             {centerContent=='lyrics' && (
               <Lyrics song={nowPlaying} setCenterContent={changeCenterContent} posInSong={posInSong}></Lyrics>
+            )}
+            {centerContent=='devices' && (
+              <DeviceSelect reverseCenterContent={reverseCenterContent}></DeviceSelect>
             )}
             
           </Group>
@@ -202,7 +203,7 @@ function App() {
 
         {!isMobile &&
           <Group className="grid">
-            <LibraryList centerContent={changeCenterContent} setData={setCenterContentData} refreshTrigger={libraryReload} ref={library}></LibraryList>
+            <LibraryList currentData={centerContententData} centerContent={changeCenterContent} setData={setCenterContentData} refreshTrigger={libraryReload} ref={library}></LibraryList>
 
             {centerContent=='playlist' && (
               <Playlist data={centerContententData} playCallback={playSong} setCenterContent={changeCenterContent}></Playlist>
@@ -211,13 +212,16 @@ function App() {
               <SearchResults searchQuery={searchQuery} ref={searchResultsRef} onLibraryUpdated={() => setLibraryReload((prev) => prev + 1)} setCenterContent={changeCenterContent}></SearchResults>
             )}
             {centerContent=='queue' && (
-              <Queue playCallback={playSong} setCenterContent={changeCenterContent} reverseCenterContent={reverseCenterContent}></Queue>
+              <Queue playCallback={playSong} setCenterContent={changeCenterContent} reverseCenterContent={reverseCenterContent} currentSong={nowPlaying}></Queue>
             )}
             {centerContent=='lyrics' && (
               <Lyrics song={nowPlaying} setCenterContent={changeCenterContent} posInSong={posInSong}></Lyrics>
             )}
+            {centerContent=='devices' && (
+              <DeviceSelect reverseCenterContent={reverseCenterContent}></DeviceSelect>
+            )}
 
-            <NowPlaying song={nowPlaying} setCenterContent={changeCenterContent} isMobile={isMobile} ></NowPlaying>
+            <NowPlaying song={nowPlaying} setCenterContent={changeCenterContent} isMobile={isMobile} onLibraryUpdated={() => setLibraryReload((prev) => prev + 1)}></NowPlaying>
           </Group>
         }
         <Player song={nowPlaying} setSong={setNowPlaying} setPosInSong={setPosInSong} setCenterContent={changeCenterContent} isMobile={isMobile}/>

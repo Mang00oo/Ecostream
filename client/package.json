@@ -7,6 +7,8 @@
     "@capacitor-community/keep-awake": "^8.0.1",
     "@capacitor/android": "^8.4.1",
     "@capacitor/core": "^8.4.1",
+    "@capacitor/device": "^8.0.2",
+    "@capawesome/capacitor-background-task": "^8.0.2",
     "@capgo/capacitor-media-session": "^8.0.28",
     "@capgo/capacitor-native-audio": "^8.4.14",
     "@dnd-kit/react": "^0.4.0",

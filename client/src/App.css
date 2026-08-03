@@ -208,6 +208,9 @@ a {
 .search-item a.SongName {
   font-size: 22px;
 }
+.PlayingText {
+  color: rgb(114, 255, 180);
+}
 .search-item a.ArtistName {
   top: 40px;
   margin-bottom: 5px;
@@ -309,6 +312,17 @@ a {
   display: flex;
   margin-bottom: 10px;
   -webkit-app-region: no-drag;
+}
+.spinner-icon {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .NewPlaylistButton {

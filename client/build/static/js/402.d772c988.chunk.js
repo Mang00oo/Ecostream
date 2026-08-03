@@ -1,0 +1,2 @@
+"use strict";(globalThis.webpackChunkclient=globalThis.webpackChunkclient||[]).push([[402],{402(e,t,n){n.d(t,{BackgroundTaskWeb:()=>s});var i=n(403);class s extends i.E_{beforeExit(e){throw this.unimplemented("Not implemented on web.")}finish(e){throw this.unimplemented("Not implemented on web.")}}}}]);
+//# sourceMappingURL=402.d772c988.chunk.js.map

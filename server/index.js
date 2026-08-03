@@ -64,21 +64,66 @@ const io = new Server(httpServer, { cors: {
     origin: "*",
     methods: ["GET", "POST"]
 }});
-
-let isPlaying = false;
+let userDevices = {}
+function updateDeviceList(userID) {
+      let devices = []
+      for (device of userDevices[userID]) {
+            devices.push({id: device.socket.id, name: device.name, type: device.type, isPlaying: device.isPlaying});
+      }
+      for (device of userDevices[userID]) {
+            io.to(device.socket.id).emit('updateDeviceList', devices)
+      }
+}
 io.on('connection', (socket) => {
   console.log('a user connected');
-  socket.on('togglePlay', (data) => {
-    console.log('Play event received, broadcasting to all clients');
-    isPlaying = data.isPlaying;
-    socket.broadcast.emit('togglePlay', { isPlaying: isPlaying });
+  socket.on('setUser', (data) => {
+      if (!userDevices[data.userID]) {
+            userDevices[data.userID] = [];
+      }
+      socket.emit('setDevicePlayback', userDevices[data.userID].length == 0);
+      userDevices[data.userID].push({
+            socket: socket,
+            name: data.deviceName,
+            type: data.deviceType,
+            isPlaying: userDevices[data.userID].length == 0,
+      });
+      console.log(userDevices);
+      updateDeviceList(data.userID);
   });
-  socket.on('getLatency', (clientDate) => {
-    const latency = Date.now()-clientDate;
-    socket.emit('getLatency', { latency: latency });
+  socket.on('togglePlay', (data) => {
+    socket.broadcast.emit('togglePlay', data);
+  });
+  socket.on('updateSong', (data) => {
+    socket.broadcast.emit('updateSong', data);
+  });
+  socket.on('setDevicePlaying', (data) => {
+      for (const [user, devices] of Object.entries(userDevices)) {
+            const index = devices.findIndex(obj => obj['socket'].id === data.id);
+            if (index != -1) {
+                  devices[index].isPlaying = data.isPlaying
+                  updateDeviceList(user);
+            };
+      }
+      io.to(data.id).emit('setDevicePlayback', data.isPlaying);
+  });
+  socket.on('ntp_ping', (clientData, callback) => {
+      const t1 = Date.now();
+      
+      if (typeof callback === 'function') {
+            const t2 = Date.now();
+            callback({t1, t2});
+      }
   });
   socket.on('disconnect', () => {
     console.log('user disconnected');
+    for (const [user, devices] of Object.entries(userDevices)) {
+      const index = devices.findIndex(obj => obj['socket'].id === socket.id);
+      if (index != -1) {
+            devices.splice(index, 1);
+            updateDeviceList(user);
+      };
+    }
+    console.log(userDevices);
   });
 });
 
@@ -105,10 +150,6 @@ async function authenticateToken(req, res, next) {
     if (err) return res.status(403).json({ message: 'Invalid or expired token' });
     if (user.userID != 'none') {
       const dbUser = await User.findById(user.userID);
-      console.log('THING');
-      console.log(user.password)
-      console.log(user.password);
-      console.log(dbUser);
       if (user.userID != 'none' && user.password != dbUser.password) {
             return res.status(403).json({ message: 'Invalid profile password' })
       }
@@ -159,7 +200,6 @@ app.get('/auth/login', async (req, res) => {
                         res.send('Invalid token');
                         return;
                   }
-                  console.log(decoded);
                   const newToken = jwt.sign({ userID: decoded.userID, password: decoded.password }, process.env.PASSWORD, { expiresIn: '7d' });
                   res.send({ success: true, token: newToken, userID: decoded.userID });
             });
@@ -174,10 +214,8 @@ function getCurrentUser(req) {
       if (!token) return null;
       try {
             const decoded = jwt.verify(token, process.env.PASSWORD);
-            console.log(decoded.userID);
             return decoded.userID;
       } catch (err) {
-            console.log('Invalid token provided');
             return null;
       }
 }
@@ -209,9 +247,21 @@ app.get('/api/control_queue', async (req, res) => {
             return;
       }
       if (action === 'next') {
-            user.posInQueue = Math.min(user.posInQueue + 1, user.queue.length - 1);
+            if (user.posInQueue + 2 < user.queue.length && !user.queue[user.posInQueue + 2].songPath.endsWith('.mp3')) {
+                  let songToDownload = user.queue[user.posInQueue + 2]
+                  downloadSong(songToDownload.artist, songToDownload.title, songToDownload.artworkPath, songToDownload.title, null, user._id, songToDownload._id);
+            }
+            let next = user.posInQueue + 1;
+            if (!user.queue[next].songPath.endsWith('.mp3')) {
+                  next++;
+            }
+            user.posInQueue = Math.min(next, user.queue.length - 1);
       } else if (action === 'prev') {
-            user.posInQueue = Math.max(user.posInQueue - 1, 0);
+            let prev = user.posInQueue - 1;
+            if (!user.queue[prev].songPath.endsWith('.mp3')) {
+                  prev--;
+            }
+            user.posInQueue = Math.max(prev, 0);
       } else if (action === 'play') {
             console.log('Playing song ID: ' + song);
             if (user.queue.some(s => s._id.toString() === song)) {
@@ -239,6 +289,12 @@ app.get('/api/get_queue', async (req, res) => {
             return;
       }
       res.send({ queue: user.queue, posInQueue: user.posInQueue });
+});
+app.get('/api/get_queue_pos', async (req, res) => {
+      const user = await User.findById(getCurrentUser(req));
+      if (user) {
+            res.send(user.posInQueue);
+      }
 });
 const shuffleArray = (array) => {
       for (let i = array.length - 1; i > 0; i--) {
@@ -302,10 +358,20 @@ const addSmartSuggestions = async (userID) => {
                         _imageUrl = info.album.image[3]['#text'];
                         }
                         console.log('Adding smart suggestion: ' + suggestion.name + ' by ' + suggestion.artist.name);
-                        const newSong = await downloadSong(suggestion.artist.name, suggestion.name, _imageUrl, _albumName, null, true);
+                        
+                        const newSong = new Song({
+                              title: suggestion.name,
+                              artist: suggestion.artist.name,
+                              duration: 0,
+                              songPath: "_suggestion_",
+                              artworkPath: _imageUrl,
+                              isCache: true
+                        });
+                        await newSong.save();
+                        
                         console.log(newSong);
                         user.queue.splice(actualIndex, 0, newSong._id);
-                        user.save();
+                        await user.save();
                         break;
                   }
             }
@@ -440,11 +506,19 @@ app.get('/api/create_playlist', async (req, res) => {
       res.send('Playlist created');
 });
 app.get('/api/add_to_playlist', async (req, res) => {
-      const playlistId = req.query.playlistId;
+      let playlistId = req.query.playlistId;
+      if (!playlistId) {
+            const user = await User.findById(getCurrentUser(req));
+            if (user.queueSource.Playlist) {
+                  playlistId = user.queueSource.Playlist;
+            }
+      }
       const song = await Song.findById(req.query.songId);
+      song.isCache = false;
+      await song.save();
       const playlist = await Playlist.findById(playlistId);
       if (!playlist) {
-            res.status(404).send('Playlist or song not found');
+            res.status(404).send(false);
             return;
       }
       playlist.songs.push(song._id);
@@ -452,9 +526,16 @@ app.get('/api/add_to_playlist', async (req, res) => {
             playlist.artworkPath = song.artworkPath;
       }
       await playlist.save();
-      res.send('Song added to playlist');
+      res.send(true);
 });
-
+app.get('/api/get_devices', async (req, res) => {
+      const list = userDevices[await getCurrentUser(req)];
+      let devices = []
+      for (device of list) {
+            devices.push({id: device.socket.id, name: device.name, type: device.type, isPlaying: device.isPlaying});
+      }
+      res.send(devices);
+});
 app.get('/', async (req, res) => {
       res.send('Hello from Ecostream!');
       //const result = await User.create({ 
@@ -480,8 +561,10 @@ function sanitizePath(input) {
         // Replace ?
         .replace(/\?/g, '');
 }
-
-const downloadSong = async (artist, title, artworkUrl, albumName, addToPlaylist, addToQueue) => {
+let downloadingSongs = [];
+const downloadSong = async (artist, title, artworkUrl, albumName, addToPlaylist, addToQueue, suggestionID) => {
+      if (downloadingSongs.includes(artist + " - " + title)) { return; }
+      downloadingSongs.push(artist + " - " + title);
       // Search YouTube for the song
       const searchQuery = `${title} - ${artist}`;
       console.log('Searching: ' + searchQuery);
@@ -515,38 +598,51 @@ const downloadSong = async (artist, title, artworkUrl, albumName, addToPlaylist,
       const result = await dl.downloadSong(link, sanitizePath(title), sanitizePath(artist), path.join(__dirname, '../music/'));
 
       // Save to MongoDB
-      const newSong = new Song({
-            title: title,
-            artist: artist,
-            duration: _duration,
-            songPath: path.join(`${sanitizePath(title)}-${sanitizePath(artist)}.mp3`),
-            artworkPath: path.join(sanitizePath(`${albumName}-${artist}.jpg`)),
-            isCache: false
-      });
-      await newSong.save();
-      if (addToPlaylist) {
-            const playlist = await Playlist.findById(addToPlaylist);
-            const user = await User.findById(addToQueue).populate('queue').populate('queueSource').exec();
-            playlist.songs.push(newSong._id);
-            playlist.save();
-            if (user.queueSource && user.queueSource.Playlist && user.queueSource.Playlist.toString() === playlist._id.toString()) {
-                  if (user.shuffle==='No Shuffle') {
-                        user.queue.push(newSong._id);
-                  } else {
-                        const index = user.posInQueue+1 + Math.floor(Math.random() * (user.queue.length+1 - user.posInQueue-1));
-                        user.queue.splice(index, 0, newSong._id);
+      if (suggestionID) {
+            let _song = await Song.findById(suggestionID);
+            _song.duration = _duration;
+            _song.songPath = path.join(`${sanitizePath(title)}-${sanitizePath(artist)}.mp3`);
+            _song.artworkPath = path.join(sanitizePath(`${albumName}-${artist}.jpg`));
+            await _song.save();
+            console.log("Song Saved!");
+      } else {
+            const newSong = new Song({
+                  title: title,
+                  artist: artist,
+                  duration: _duration,
+                  songPath: path.join(`${sanitizePath(title)}-${sanitizePath(artist)}.mp3`),
+                  artworkPath: path.join(sanitizePath(`${albumName}-${artist}.jpg`)),
+                  isCache: false
+            });
+            await newSong.save();
+            if (addToPlaylist) {
+                  const playlist = await Playlist.findById(addToPlaylist);
+                  // Atomically push into playlist.songs to avoid race conditions
+                  await Playlist.findByIdAndUpdate(playlist._id, { $push: { songs: newSong._id } });
+                  if (addToQueue) {
+                        const user = await User.findById(addToQueue).populate('queue').populate('queueSource').exec();
+                        if (user && user.queueSource && user.queueSource.Playlist && user.queueSource.Playlist.toString() === playlist._id.toString()) {
+                              if (user.shuffle === 'No Shuffle') {
+                                    await User.findByIdAndUpdate(user._id, { $push: { queue: newSong._id } });
+                              } else {
+                                    const index = user.posInQueue+1 + Math.floor(Math.random() * (user.queue.length+1 - user.posInQueue-1));
+                                    // Use $push with $position for inserting at a specific index
+                                    await User.findByIdAndUpdate(user._id, { $push: { queue: { $each: [newSong._id], $position: index } } });
+                              }
+                        }
                   }
-                  user.save();
             }
-      }
-      if (addToQueue) {
-            if (addToQueue != true) {
-                 const user = await User.findById(addToQueue);
-                  user.queue.push(newSong._id);
-                  user.save(); 
+            if (addToQueue) {
+                  if (addToQueue != true) {
+                        // Atomically push into the user's queue
+                        await User.findByIdAndUpdate(addToQueue, { $push: { queue: newSong._id } });
+                  }
             }
+            // remove from downloading list
+            const idx = downloadingSongs.findIndex(s => s === artist + " - " + title);
+            if (idx !== -1) downloadingSongs.splice(idx, 1);
+            return newSong;
       }
-      return newSong;
 }
 const downloadQueueProcessor = async () => {
       if (downloadQueue.length > 0 && !isDownloading) {
@@ -573,18 +669,18 @@ app.get('/api/download', async (req, res) => {
       if (existingSong) {
             existingSong.isCache = addToPlaylist ? false : existingSong.isCache;
             await existingSong.save();
-            const playlist = await Playlist.findById(addToPlaylist);
-            const user = await User.findById(await getCurrentUser(req)).populate('queue').populate('queueSource').exec();
-            playlist.songs.push(existingSong._id);
-            playlist.save();
-            if (user.queueSource && user.queueSource.Playlist && user.queueSource.Playlist.toString() === playlist._id.toString()) {
-                  if (user.shuffle==='No Shuffle') {
-                        user.queue.push(existingSong._id);
-                  } else {
-                        const index = user.posInQueue+1 + Math.floor(Math.random() * (user.queue.length+1 - user.posInQueue-1));
-                        user.queue.splice(index, 0, existingSong._id);
+            if (addToPlaylist) {
+                  const playlist = await Playlist.findById(addToPlaylist);
+                  await Playlist.findByIdAndUpdate(playlist._id, { $push: { songs: existingSong._id } });
+                  const user = await User.findById(await getCurrentUser(req)).populate('queue').populate('queueSource').exec();
+                  if (user && user.queueSource && user.queueSource.Playlist && user.queueSource.Playlist.toString() === playlist._id.toString()) {
+                        if (user.shuffle==='No Shuffle') {
+                              await User.findByIdAndUpdate(user._id, { $push: { queue: existingSong._id } });
+                        } else {
+                              const index = user.posInQueue+1 + Math.floor(Math.random() * (user.queue.length+1 - user.posInQueue-1));
+                              await User.findByIdAndUpdate(user._id, { $push: { queue: { $each: [existingSong._id], $position: index } } });
+                        }
                   }
-                  user.save();
             }
             res.send(existingSong);
             console.log('Adding song');

@@ -46,6 +46,9 @@ const Playlist = ({data, playCallback, setCenterContent}) => {
             return <HiMiniSparkles />;
         }
     }
+    function editDetails() {
+
+    }
     useEffect(()=> {
         setSongs(data.songs);
         setSelectedShuffleOption(data.shuffle || 'No Shuffle');
@@ -54,7 +57,7 @@ const Playlist = ({data, playCallback, setCenterContent}) => {
         <Panel defaultSize={40} minSize={'40%'} className="panel">
             <img className="playlist-image" src={data.artworkPath ? serverApi.getMediaUrl() + data.artworkPath : 'https://placehold.co/300x300?text=' + data.name} alt="Playlist cover" />
             <div className="playlist-details">
-                <h3> {data.name} </h3>
+                <h3 onClick={editDetails}> {data.name} </h3>
                 <p> {data.songs.length} songs </p>
                 <button className="PlayButton2" onClick={playPlaylist}> <FaPlay />‎ Play </button>
                 <button className="PlayButton2" onClick={onShuffleButtonPressed}> {getShuffleIcon()}‎ {selectedShuffleOption} </button>

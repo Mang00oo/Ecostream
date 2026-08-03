@@ -7,20 +7,15 @@ import { MediaSession } from '@capgo/capacitor-media-session';
 import { FaPlay, FaPause, FaMicrophone } from 'react-icons/fa6';
 import { IoPlaySkipBack, IoPlaySkipForward } from "react-icons/io5";
 import { HiMiniQueueList } from "react-icons/hi2";
+import { MdConnectedTv } from "react-icons/md";
 import { AudioHeadless } from "audiotoolheadless";
 import { motion } from "motion/react"
-
-if (nativeApi.getPlatform() != 'Web') {
-    await NativeAudio.configure({
-        backgroundPlayback: true,
-        focus: true,
-    });
-}
 
 const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
     const [isPlaying, setIsPlaying] = useState(false);
     const [nextSong, setNextSong] = useState({});
     const [duration, setDuration] = useState(0);
+    const [lastPos, setLastPos] = useState(0);
     const [pos, setPos] = useState(0);
     const playerRef = useRef(null);
     const seekbarRef = useRef(null);
@@ -30,22 +25,33 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
             title: _song.title,
             artist: _song.artist,
             artwork: [{
-                src: serverApi.getMediaUrl() + _song.artworkPath,
+                src: serverApi.getImageUrl(_song.artworkPath),
                 sizes: "300x300",
                 type: "image/jpeg",
             }]
         });
     }
 
-    function togglePlayback(target) {
+    async function togglePlayback(target, isServer = false) {
         if (!target) {
             MediaSession.setPlaybackState({playbackState: 'paused'});
+            await new Promise(resolve => setTimeout(resolve, 50));
+
             playerRef.current.pause();
             setIsPlaying(false);
         } else {
             MediaSession.setPlaybackState({playbackState: 'playing'});
-            playerRef.current.play();
-            playerRef.current.initialize({
+            await new Promise(resolve => setTimeout(resolve, 50));
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            await ctx.resume();
+            if (ctx.state === 'suspended' || ctx.state === 'interrupted') {
+                console.log("RESUMING AUDIO CONTEXT");
+                await ctx.resume();
+            }
+            
+            window.dispatchEvent(new Event('mediaplay'));
+            await playerRef.current.play();
+            await playerRef.current.initialize({
                 mode: 'VANILLA',
                 useDefaultEventListeners: true,
                 enableHls: false,           // Enable HLS streaming support
@@ -55,7 +61,9 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
                 preloadStrategy: 'auto',
             });
             setIsPlaying(true);
+            
         }
+        if (!isServer) serverApi.setPlaybackOnAllClients(target, AudioHeadless.getAudioElement().currentTime);
     }
 
     async function skipSong() {
@@ -63,10 +71,12 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
         if (!nextSong.title) {
             const response = await serverApi.controlQueue('next');
             setSong(response);
+            serverApi.updateSongOnAllClients(response);
             songToPlay = response;
         } else {
             songToPlay = nextSong;
             setSong(nextSong);
+            serverApi.updateSongOnAllClients(nextSong);
         }
         
         // Play Song
@@ -85,14 +95,19 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
             const response = await serverApi.controlQueue('next');
         }
         const response2 = await serverApi.getNextPlaying();
-        setNextSong(response2);
-        serverApi.startPlayingOnAllClients();
+        if (response2.songPath && response2.songPath.endsWith('.mp3')) {
+            setNextSong(response2);
+        } else {
+            setNextSong({});
+        }
+        serverApi.setPlaybackOnAllClients(true, 0);
     }
     async function prevSong() {
-        setNextSong(song);
+        setNextSong({});
 
         const response = await serverApi.controlQueue('prev');
         setSong(response);
+        serverApi.updateSongOnAllClients(response);
         
         // Play Song
         await playerRef.current.stop();
@@ -106,7 +121,7 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
 
         updateMetadata(response);
         setIsPlaying(true);
-        serverApi.startPlayingOnAllClients();
+        serverApi.setPlaybackOnAllClients(true, 0);
     }
     function formatTime(timeInSeconds) {
         if (isNaN(timeInSeconds)) return "00:00";
@@ -122,6 +137,21 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
         const percentage = ((newTime - min) / (max - min)) * 100;
         seekbarRef.current.style.background = `linear-gradient(to right, #ffffff 0%, #ffffff ${percentage}%, #ffffff3e ${percentage}%, #ffffff3e 100%)`;
     }
+    async function initSilence() {
+        if (nativeApi.getPlatform() == 'Capacitor') {
+            await NativeAudio.configure({
+                backgroundPlayback: true,
+                focus: true,
+            });
+        }
+        await NativeAudio.preload({
+            assetId: 'silence_token',
+            assetPath: 'silence.mp3',
+            isUrl: false
+        });
+        
+        //await NativeAudio.play({ assetId: 'silence_token' });
+    }
 
     useEffect(()=> {
         updateMetadata(song);
@@ -136,8 +166,8 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
     }, [song._id]);
 
     useEffect(() => {
-        MediaSession.setActionHandler({action: 'pause'}, ()=> {togglePlayback(false)});
-        MediaSession.setActionHandler({action: 'play'}, ()=> {togglePlayback(true)});
+        MediaSession.setActionHandler({action: 'pause'}, ()=> {togglePlayback(false); });
+        MediaSession.setActionHandler({action: 'play'}, ()=> {togglePlayback(true); });
         MediaSession.setActionHandler({action: 'nexttrack'}, ()=> {skipSong()});
         MediaSession.setActionHandler({action: 'previoustrack'}, ()=> {prevSong()});
         
@@ -171,9 +201,34 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
 
         MediaSession.setActionHandler({action: 'seekto'}, (e)=> {
             player.seekToTime(e.seekTime);
+            setPos(e.seekTime);
+            serverApi.setPlaybackOnAllClients(playerRef.current.getCurrentState().playbackState == 'playing', e.seekTime);
         });
 
-        updateMetadata(song);
+        serverApi.subscribeToPlayEvent((state, seek)=>{
+            togglePlayback(state, true);
+            setPos(seek);
+            if (playerRef.current != null) {
+                playerRef.current.seekToTime(seek);
+            }
+            updateSeekbarGradient();
+        });
+        serverApi.subscribeToDevicePlaybackEvent((state)=>{
+            if (state) {
+                player.unmute();
+            } else {
+                player.mute();
+            }
+        });
+        serverApi.subscribeToUpdateSongEvent(async (song) => {
+            setSong(song);
+            const response2 = await serverApi.getNextPlaying();
+            setNextSong(response2);
+        });
+
+        initSilence();
+
+        //updateMetadata(song);
     }, [])
     return(
         <div className="audio-player" onClick={()=>{if(isMobile) setCenterContent('none')}} style={{bottom: isMobile?"77px":"10px"}}>
@@ -191,7 +246,7 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
                     }
                 }}
             >
-                <img src={serverApi.getMediaUrl() + song.artworkPath} className="player-image" crossOrigin="anonymous"></img>
+                <img src={serverApi.getImageUrl(song.artworkPath)} className="player-image" crossOrigin="anonymous"></img>
                 <div className="player-details-text">
                     <h3>{song.title}</h3>
                     <p>{song.artist}</p>
@@ -225,6 +280,7 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
                                 playerRef.current.seekToTime(newTime);
                             }
                             updateSeekbarGradient();
+                            serverApi.setPlaybackOnAllClients(isPlaying, newTime);
                         }}
                         className={isMobile? "player-seek-mobile" : "player-seek-desktop"}
                         ref={seekbarRef}
@@ -241,6 +297,9 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
                     </motion.button>
                     <motion.button className="PlayButton" onClick={() => {setCenterContent('lyrics');}} whileHover={{ scale: 1.1 }}>
                         <FaMicrophone />
+                    </motion.button>
+                    <motion.button className="PlayButton" onClick={() => {setCenterContent('devices');}} whileHover={{ scale: 1.1 }}>
+                        <MdConnectedTv />
                     </motion.button>
                 </div>
             }

@@ -2,6 +2,9 @@ const { app, BrowserWindow, ipcMain, TouchBar, nativeImage } = require('electron
 
 const { TouchBarLabel, TouchBarButton, TouchBarSpacer } = TouchBar
 
+const cp = require('child_process')
+const os = require('os')
+
 const path = require('path')
 
 let mainWindow;
@@ -40,6 +43,20 @@ const createWindow = () => {
   }
 });
 
+}
+
+function getComputerName() {
+  switch (process.platform) {
+    case "win32":
+      return process.env.COMPUTERNAME;
+    case "darwin":
+      return cp.execSync("scutil --get ComputerName").toString().trim();
+    case "linux":
+      const prettyname = cp.execSync("hostnamectl --pretty").toString().trim();
+      return prettyname === "" ? os.hostname() : prettyname;
+    default:
+      return os.hostname();
+  }
 }
 
 let isPlaying = false;

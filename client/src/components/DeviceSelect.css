@@ -1,0 +1,20 @@
+.DeviceSelectContainer {
+    display: flex;
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+    transform: translate(0, 0);
+}
+.DeviceSelectContainer > h4 {
+    font-size: 25px;
+    font-weight: normal;
+    margin: 15px;
+}
+.DeviceSelectContainer > button {
+    position: fixed;
+    right: 10px;
+}
+.DeviceSelectContainer > svg {
+    position: fixed;
+    left: 10px;
+}

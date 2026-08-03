@@ -1,8 +1,9 @@
 import { Capacitor } from '@capacitor/core';
+import { Device } from '@capacitor/device';
 let window;
 let electronAPI;
 
-let currentPlatform = "Web";
+let currentPlatform = 'Web';
 
 export function init(_window) {
     window = _window;
@@ -12,9 +13,8 @@ export function init(_window) {
     }
     if (window.electronAPI) {
         electronAPI = window.electronAPI;
-        console.log('Running in Electron');
+        currentPlatform = 'Electron';
     } else {
-        console.log('Running in browser');
     }
 }
 export function getPlatform() {
@@ -23,7 +23,13 @@ export function getPlatform() {
     }
     return currentPlatform;
 }
-export function getDeviceName() {
+export async function getDeviceName() {
+    if (getPlatform() == 'Capacitor') {
+        const info = await Device.getInfo();
+        return info.name;
+    } else if (getPlatform() == 'Electron') {
+        return 'Desktop App'
+    }
     return 'Browser';
 }
 export function subscribeToPlayEvent(callback) {

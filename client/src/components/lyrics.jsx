@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Panel } from "react-resizable-panels";
 import { Client } from 'lrclib-api';
 import { FaPlay } from "react-icons/fa6";
+import { IoClose } from "react-icons/io5";
 import { motion } from "motion/react";
 
 const client = new Client();
@@ -57,7 +58,7 @@ const Lyrics = ({song, setCenterContent, posInSong}) => {
     return (
         <Panel defaultSize={30} minSize={'12%'} className="panel" collapsible={true}>
             <h2> Lyrics </h2>
-            <button className="CenterCloseButton" onClick={() => setCenterContent('none')}> X </button>
+            <button className="CenterCloseButton" onClick={() => setCenterContent('none')}> <IoClose /> </button>
             <div className="lyrics-container" ref={containerRef} onWheel={handleScroll} onTouchMove={handleScroll} onScroll={handleScroll}>
                 {lyrics[0] ? lyrics.map((line, index) => 
                 <motion.p

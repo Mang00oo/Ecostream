@@ -1,7 +1,8 @@
 import axios from 'axios';
 import { AutoTextSize } from 'auto-text-size'
 import * as serverApi from '../apis/server-api';
-import { FaPlay, FaPlus } from "react-icons/fa6";
+import { FaPlay, FaPlus, FaDownload } from "react-icons/fa6";
+import { BiEqualizer } from "react-icons/bi";
 import { HiMiniSparkles } from "react-icons/hi2";
 import { gsap } from "gsap";
 import { useRef } from 'react';
@@ -11,9 +12,6 @@ export function CreateSearchItem({ songName, artistName, imageUrl, songUrl, mbid
   const artistUrl = songUrl.substring(0, songUrl.lastIndexOf('/_/'));
   function handleClick() {
     addCallback(songName, artistName, imageUrl, mbid, albumName);
-  }
-  function handleClick2() {
-    playCallback(songName, artistName, imageUrl);
   }
   return (
     <div className="search-item">
@@ -26,8 +24,6 @@ export function CreateSearchItem({ songName, artistName, imageUrl, songUrl, mbid
         </a>
         <a className="ArtistName" href={artistUrl}><h4 className="ArtistName"> {artistName} </h4></a>
       </div>
-      
-      <button className="PlayButton2" onClick={handleClick2}> <FaPlay /> </button>
       <button className="AddButton" onClick={handleClick}> + </button>
     </div>
   );
@@ -41,29 +37,32 @@ export function CreateLibraryItem({ playlist, callback }) {
   }
   return (
     <motion.div className="library-item" onClick={handleClick} whileHover={{ scale: 1.05 }}>
-      <img src={image} onerror="this.onerror=null; this.src='https://placehold.co/300x300?text=No+Image';" alt="Playlist Image"></img>
+      <img src={image} alt="Playlist Image"></img>
       <h3> {playlist.name} </h3>
       <p> {songCount} songs</p>
     </motion.div>
   )
 }
 
-export function CreateSongItem({ song, playCallback }) {
+export function CreateSongItem({ song, playCallback, isCurrent }) {
   function handleClick() {
-    playCallback(song);
+    console.log(song);
+    if (song.isSearch || song.songPath.endsWith('.mp3')) {
+      playCallback(song);
+    }
   }
   return (
     <AnimatePresence>
       <motion.div className="search-item" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} transition={{ duration: 0.3 }}>
-        <img src={song.isSearch ? song.artworkPath : serverApi.getMediaUrl()+song.artworkPath} alt="Song Image"></img>
+        <img src={serverApi.getImageUrl(song.artworkPath)} alt="Song Image"></img>
         <div className="song-details">
-          <AutoTextSize className="SongName" maxFontSizePx={160} mode="oneline">
+          <AutoTextSize className={isCurrent? "SongName PlayingText" :"SongName"} maxFontSizePx={160} mode="oneline">
             {song.isCache && <HiMiniSparkles/>}
             {song.title}
           </AutoTextSize>
           <h4 className="ArtistName"> {song.artist} </h4>
         </div>
-        <button className="PlayButton" onClick={handleClick}> {song.isSearch ? <FaPlus /> : <FaPlay />} </button>
+        <button className="PlayButton" onClick={handleClick}> {song.isSearch ? <FaPlus /> : isCurrent ? <BiEqualizer /> : song.songPath.endsWith('.mp3') ? <FaPlay /> : <FaDownload />} </button>
       </motion.div>
     </AnimatePresence>
   );

@@ -5,7 +5,7 @@ import { FaPlus } from "react-icons/fa6";
 import * as ListItemCreator from './list-items';
 import { gsap } from "gsap";
 
-const LibraryList = ({centerContent, setData, refreshTrigger}) => {
+const LibraryList = ({currentData, centerContent, setData, refreshTrigger}) => {
     const [libraryItems, setLibraryItems] = useState([]);
     const handleLibraryClick = (playlist) => {
         console.log('Clicked playlist: ' + playlist.name);
@@ -16,9 +16,18 @@ const LibraryList = ({centerContent, setData, refreshTrigger}) => {
     const loadPlaylists = async () => {
         const data = await serverApi.getLibrary();
         setLibraryItems(data);
+        return data;
     };
     useEffect(() => {
-        loadPlaylists();
+        async function update() {
+            const playlists = await loadPlaylists();
+
+            if (currentData._id) {
+                const result = playlists.find(playlist => playlist._id === currentData._id);
+                setData(result);
+            }
+        }
+        update();
     }, [refreshTrigger]);
 
     return (
