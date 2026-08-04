@@ -297,6 +297,12 @@ a {
   display: flex;
   -webkit-app-region: no-drag;
 }
+span {
+  display: flex;
+}
+.clickable {
+  cursor: pointer;
+}
 .PlayButton2 {
   bottom: 10px;
   padding: 5px 10px;

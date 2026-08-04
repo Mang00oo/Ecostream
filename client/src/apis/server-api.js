@@ -153,8 +153,12 @@ export async function addStreamedSong(artist, title, artwork) {
     return response.data;
 }
 
-export async function createPlaylist(name) {
-    const response = await axios.get(SERVER_API_URL + 'api/create_playlist', { params: { name: name } });
+export async function editPlaylist(name, id) {
+    const response = await axios.get(SERVER_API_URL + 'api/edit_playlist', { params: { name: name, id: id } });
+    return response.data;
+}
+export async function deletePlaylist(id) {
+    const response = await axios.get(SERVER_API_URL + 'api/delete_playlist', { params: { id: id } });
     return response.data;
 }
 

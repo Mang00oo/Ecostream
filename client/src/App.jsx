@@ -13,6 +13,7 @@ import DeviceSelect from './components/device-select';
 import Login from './components/login';
 import Player from './components/player';
 import NavigationDock from './components/navigation-dock';
+import EditPlaylistPopup from './components/edit-playlist-popup';
 import { KeepAwake } from '@capacitor-community/keep-awake';
 import * as nativeApi from './apis/native-api';
 import { FaSearch, FaUser } from "react-icons/fa";
@@ -33,6 +34,8 @@ function App() {
   const [nowPlaying, setNowPlaying] = useState({});
   const [posInSong, setPosInSong] = useState(0);
   const [isSignedIn, setIsSignedIn] = useState('false');
+
+  const editPlaylistRef = useRef(null);
   
   const [useAutoPlay, setUseAutoPlay] = useState(false);
   const [libraryReload, setLibraryReload] = useState(0);
@@ -87,11 +90,6 @@ function App() {
       getNowPlaying();
     }
   }, [isSignedIn]);
-
-  const createPlaylist = async () => {
-    const response = await serverApi.createPlaylist('New Playlist');
-    console.log(response);
-  }
   const playSong = async (response) => {
     setUseAutoPlay(true);
     console.log(response);
@@ -160,6 +158,7 @@ function App() {
         <title>Ecostream</title>
         {isSignedIn=='true' &&
         <>
+        <EditPlaylistPopup ref={editPlaylistRef} libraryReload={() => setLibraryReload((prev) => prev + 1)}/>
         {!isMobile &&
           <div className="top-bar">
             <form className="search-form" onSubmit={(e) => { e.preventDefault(); search(); }}>
@@ -180,10 +179,10 @@ function App() {
               <NowPlaying song={nowPlaying} setCenterContent={changeCenterContent} isMobile={isMobile} onLibraryUpdated={() => setLibraryReload((prev) => prev + 1)}></NowPlaying>
             }
             {centerContent=='library' &&
-              <LibraryList currentData={centerContententData} centerContent={changeCenterContent} setData={setCenterContentData} refreshTrigger={libraryReload} ref={library}></LibraryList>
+              <LibraryList currentData={centerContententData} centerContent={changeCenterContent} setData={setCenterContentData} refreshTrigger={libraryReload} ref={library} editRef={editPlaylistRef}></LibraryList>
             }
             {centerContent=='playlist' && (
-              <Playlist data={centerContententData} playCallback={playSong} setCenterContent={changeCenterContent}></Playlist>
+              <Playlist data={centerContententData} playCallback={playSong} setCenterContent={changeCenterContent} editRef={editPlaylistRef}></Playlist>
             )}
             {centerContent=='search' && (
               <SearchResults searchQuery={searchQuery} ref={searchResultsRef} onLibraryUpdated={() => setLibraryReload((prev) => prev + 1)} setCenterContent={changeCenterContent}></SearchResults>
@@ -203,10 +202,10 @@ function App() {
 
         {!isMobile &&
           <Group className="grid">
-            <LibraryList currentData={centerContententData} centerContent={changeCenterContent} setData={setCenterContentData} refreshTrigger={libraryReload} ref={library}></LibraryList>
+            <LibraryList currentData={centerContententData} centerContent={changeCenterContent} setData={setCenterContentData} refreshTrigger={libraryReload} ref={library} editRef={editPlaylistRef}></LibraryList>
 
             {centerContent=='playlist' && (
-              <Playlist data={centerContententData} playCallback={playSong} setCenterContent={changeCenterContent}></Playlist>
+              <Playlist data={centerContententData} playCallback={playSong} setCenterContent={changeCenterContent} editRef={editPlaylistRef}></Playlist>
             )}
             {centerContent=='search' && (
               <SearchResults searchQuery={searchQuery} ref={searchResultsRef} onLibraryUpdated={() => setLibraryReload((prev) => prev + 1)} setCenterContent={changeCenterContent}></SearchResults>

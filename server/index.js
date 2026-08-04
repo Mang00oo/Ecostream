@@ -493,17 +493,31 @@ app.get('/api/get_library', async (req, res) => {
       }
       res.send(user.playlists);
 });
-app.get('/api/create_playlist', async (req, res) => {
+app.get('/api/edit_playlist', async (req, res) => {
       const name = req.query.name;
-      const newPlaylist = new Playlist({
-            name: name,
-            songs: [],
-            artworkPath: ''
-      });
-      await newPlaylist.save();
-      const user = await getCurrentUser(req);
-      await User.findByIdAndUpdate(user._id, { $push: { playlists: newPlaylist._id } });
+      const id = req.query.id;
+      if (id) {
+            const playlist = await Playlist.findById(id);
+            playlist.name = name;
+            await playlist.save();
+      } else {
+           const newPlaylist = new Playlist({
+                  name: name,
+                  songs: [],
+                  artworkPath: ''
+            });
+            await newPlaylist.save();
+            const user = await getCurrentUser(req);
+            await User.findByIdAndUpdate(user, { $push: { playlists: newPlaylist._id } }); 
+      }
       res.send('Playlist created');
+});
+app.get('/api/delete_playlist', async (req, res) => {
+      const id = req.query.id;
+      if (id) {
+            await Playlist.findByIdAndDelete(id);
+      }
+      res.send('Playlist deleted');
 });
 app.get('/api/add_to_playlist', async (req, res) => {
       let playlistId = req.query.playlistId;
