@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import * as serverApi from "../apis/server-api";
+import * as nativeApi from "../apis/native-api";
 import toast from "react-hot-toast"
 
-const Login = ({setSignedIn, signedInState}) => {
+const Login = ({setSignedIn, signedInState, setOnline, onlineState}) => {
     const [input, setInput] = useState('');
     const [user, setUser] = useState('');
     const [users, setUsers] = useState([]);
@@ -55,8 +56,12 @@ const Login = ({setSignedIn, signedInState}) => {
     useEffect(() => {
         //localStorage.removeItem('token');
         async function login() {
+            const isOnline = await serverApi.getIsOnline();
+            const isMobile = await nativeApi.getPlatform() == 'Capacitor';
+            setOnline(isOnline);
+            if (!isOnline) return;
             const result = await serverApi.checkLogin();
-            if (result.userId != 'none') {
+            if (result.userID != 'none') {
                 if (result.success == true) {
                     setSignedIn('true');
                 }

@@ -34,6 +34,8 @@ function App() {
   const [nowPlaying, setNowPlaying] = useState({});
   const [posInSong, setPosInSong] = useState(0);
   const [isSignedIn, setIsSignedIn] = useState('false');
+  const [isOnline, setIsOnline] = useState(true);
+  const [backgroundImage, setBackgroundImage] = useState('');
 
   const editPlaylistRef = useRef(null);
   
@@ -90,6 +92,9 @@ function App() {
       getNowPlaying();
     }
   }, [isSignedIn]);
+  useEffect(()=> {
+    serverApi.getImageUrl(nowPlaying.artworkPath, setBackgroundImage)
+  }, [nowPlaying._id]);
   const playSong = async (response) => {
     setUseAutoPlay(true);
     console.log(response);
@@ -153,10 +158,10 @@ function App() {
             },
           }}
       />
-      <div style={nowPlaying?.artworkPath ? {'--background-image': `url('${serverApi.getImageUrl(nowPlaying.artworkPath)}')`} : {}} className="background-image"></div>
+      <div style={nowPlaying?.artworkPath ? {'--background-image': `url('${backgroundImage}')`} : {}} className="background-image"></div>
       <header className="App-header">
         <title>Ecostream</title>
-        {isSignedIn=='true' &&
+        {(isSignedIn=='true' || !isOnline) &&
         <>
         <EditPlaylistPopup ref={editPlaylistRef} libraryReload={() => setLibraryReload((prev) => prev + 1)}/>
         {!isMobile &&
@@ -179,7 +184,7 @@ function App() {
               <NowPlaying song={nowPlaying} setCenterContent={changeCenterContent} isMobile={isMobile} onLibraryUpdated={() => setLibraryReload((prev) => prev + 1)}></NowPlaying>
             }
             {centerContent=='library' &&
-              <LibraryList currentData={centerContententData} centerContent={changeCenterContent} setData={setCenterContentData} refreshTrigger={libraryReload} ref={library} editRef={editPlaylistRef}></LibraryList>
+              <LibraryList currentData={centerContententData} centerContent={changeCenterContent} setData={setCenterContentData} refreshTrigger={libraryReload} ref={library} editRef={editPlaylistRef} isOnline={isOnline}></LibraryList>
             }
             {centerContent=='playlist' && (
               <Playlist data={centerContententData} playCallback={playSong} setCenterContent={changeCenterContent} editRef={editPlaylistRef}></Playlist>
@@ -202,7 +207,7 @@ function App() {
 
         {!isMobile &&
           <Group className="grid">
-            <LibraryList currentData={centerContententData} centerContent={changeCenterContent} setData={setCenterContentData} refreshTrigger={libraryReload} ref={library} editRef={editPlaylistRef}></LibraryList>
+            <LibraryList currentData={centerContententData} centerContent={changeCenterContent} setData={setCenterContentData} refreshTrigger={libraryReload} ref={library} editRef={editPlaylistRef} isOnline={isOnline}></LibraryList>
 
             {centerContent=='playlist' && (
               <Playlist data={centerContententData} playCallback={playSong} setCenterContent={changeCenterContent} editRef={editPlaylistRef}></Playlist>
@@ -229,8 +234,8 @@ function App() {
         }
         </>
         }
-        {isSignedIn!='true' &&
-          <Login setSignedIn={setIsSignedIn} signedInState={isSignedIn}/>
+        {isSignedIn!='true' && isOnline &&
+          <Login setSignedIn={setIsSignedIn} signedInState={isSignedIn} setOnline={setIsOnline} onlineState={isOnline}/>
         }
         
         

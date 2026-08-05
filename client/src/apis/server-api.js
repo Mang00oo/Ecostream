@@ -4,13 +4,13 @@ import toast from 'react-hot-toast';
 import { CapacitorHttp } from '@capacitor/core';
 import { BackgroundTask } from '@capawesome/capacitor-background-task';
 import * as nativeApi from './native-api';
-axios.defaults.adapter = 'fetch'; 
 
 const SERVER_API_URL = 'http://100.90.153.39:8080/';
 
 const socket = io(SERVER_API_URL);
 
 let currentUserId = 'none';
+let isOnline = true;
 
 let latency = 0;
 let clockOffset = 0;
@@ -77,7 +77,14 @@ export function subscribeToDeviceListUpdateEvent(callback) {
 axios.interceptors.request.use(config => {
   const token = localStorage.getItem('token');
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+    if (config.headers && typeof config.headers.set === 'function') {
+      config.headers.set('Authorization', `Bearer ${token}`);
+    } else {
+      config.headers = {
+        ...config.headers,
+        Authorization: `Bearer ${token}`,
+      };
+    }
   }
   return config;
 }, error => {
@@ -161,6 +168,10 @@ export async function deletePlaylist(id) {
     const response = await axios.get(SERVER_API_URL + 'api/delete_playlist', { params: { id: id } });
     return response.data;
 }
+export async function playlistData(id) {
+    const response = await axios.get(SERVER_API_URL + 'api/playlist_data', { params: { id: id } });
+    return response.data;
+}
 
 export async function controlQueue(action, songId) {
     const params = { action: action };
@@ -219,14 +230,40 @@ export async function addToPlaylist(playlistId, songId) {
     return response.data;
 }
 
-export function getMediaUrl() {
-    return SERVER_API_URL + 'media/';
+export async function getMediaUrl(path) {
+    if (isOnline) {
+        return SERVER_API_URL + 'media/' + path;
+    } else {
+        const { getMediaUriFromPath } = await import('./offline');
+        return await getMediaUriFromPath(path);
+    }
+    
 }
-export function getImageUrl(image) {
+export function getApiUrl() {
+    return SERVER_API_URL + 'api/'
+}
+export async function getIsOnline() {
+    try {
+        const response = await axios.get(SERVER_API_URL);
+        if (response) {
+            isOnline = true
+            return true;
+        }
+    } catch (error) {
+        isOnline = false;
+        return false;
+    }
+}
+export async function getImageUrl(image, setter) {
     if (!image) {return 'no image';}
     if (image.startsWith('https://') || image.startsWith('http://')) {
-        return image;
+        setter(image);
     } else {
-        return SERVER_API_URL + 'media/' + image;
+        if (isOnline) {
+            setter(SERVER_API_URL + 'media/' + image);
+        } else {
+            const { getMediaUriFromPath } = await import('./offline');
+            setter(await getMediaUriFromPath(image));
+        }
     }
 }

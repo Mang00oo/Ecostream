@@ -493,6 +493,10 @@ app.get('/api/get_library', async (req, res) => {
       }
       res.send(user.playlists);
 });
+app.get('/api/playlist_data', async (req, res) => {
+      const playlist = await Playlist.findById(req.query.id).populate({path: 'songs'}).exec();
+      res.send(playlist);
+});
 app.get('/api/edit_playlist', async (req, res) => {
       const name = req.query.name;
       const id = req.query.id;
@@ -551,11 +555,7 @@ app.get('/api/get_devices', async (req, res) => {
       res.send(devices);
 });
 app.get('/', async (req, res) => {
-      res.send('Hello from Ecostream!');
-      //const result = await User.create({ 
-      //      username: 'Stefan', 
-      //      password: 'password123'
-      //});
+      res.send(true);
 });
 
 let downloadQueue = [];

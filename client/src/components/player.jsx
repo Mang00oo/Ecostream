@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './AudioPlayer.css';
 import * as serverApi from '../apis/server-api';
-import * as nativeApi from '../apis/native-api'
+import * as nativeApi from '../apis/native-api';
+import * as queueApi from '../apis/queue-api';
 import { NativeAudio } from '@capgo/capacitor-native-audio';
 import { MediaSession } from '@capgo/capacitor-media-session';
 import { FaPlay, FaPause, FaMicrophone } from 'react-icons/fa6';
@@ -17,6 +18,7 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
     const [duration, setDuration] = useState(0);
     const [lastPos, setLastPos] = useState(0);
     const [pos, setPos] = useState(0);
+    const [image, setImage] = useState('');
     const playerRef = useRef(null);
     const seekbarRef = useRef(null);
 
@@ -25,7 +27,7 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
             title: _song.title,
             artist: _song.artist,
             artwork: [{
-                src: serverApi.getImageUrl(_song.artworkPath),
+                src: image,
                 sizes: "300x300",
                 type: "image/jpeg",
             }]
@@ -69,7 +71,7 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
     async function skipSong() {
         let songToPlay;
         if (!nextSong.title) {
-            const response = await serverApi.controlQueue('next');
+            const response = await queueApi.nextSong();
             setSong(response);
             serverApi.updateSongOnAllClients(response);
             songToPlay = response;
@@ -84,7 +86,7 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
         await playerRef.current.loadAndPlay({
             id: songToPlay._id,
             title: songToPlay.title,
-            source: serverApi.getMediaUrl()+songToPlay.songPath,
+            source: await serverApi.getMediaUrl(songToPlay.songPath),
             artwork: null,
         });
         await playerRef.current.play();
@@ -92,9 +94,9 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
         updateMetadata(songToPlay);
         setIsPlaying(true);
         if (nextSong.title) {
-            const response = await serverApi.controlQueue('next');
+            const response = await queueApi.nextSong();
         }
-        const response2 = await serverApi.getNextPlaying();
+        const response2 = await queueApi.nextSongPreload();
         if (response2.songPath && response2.songPath.endsWith('.mp3')) {
             setNextSong(response2);
         } else {
@@ -105,7 +107,7 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
     async function prevSong() {
         setNextSong({});
 
-        const response = await serverApi.controlQueue('prev');
+        const response = await queueApi.prevSong();
         setSong(response);
         serverApi.updateSongOnAllClients(response);
         
@@ -114,7 +116,7 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
         await playerRef.current.loadAndPlay({
             id: response._id,
             title: response.title,
-            source: serverApi.getMediaUrl()+response.songPath,
+            source: await serverApi.getMediaUrl(response.songPath),
             artwork: null,
         });
         await playerRef.current.play();
@@ -155,14 +157,18 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
 
     useEffect(()=> {
         updateMetadata(song);
-        if (playerRef.current) {
-            playerRef.current.loadTrack({
-                id: song._id,
-                title: song.title,
-                source: serverApi.getMediaUrl()+song.songPath,
-                artwork: null,
-            });
+        async function _play() {
+            if (playerRef.current) {
+                playerRef.current.loadTrack({
+                    id: song._id,
+                    title: song.title,
+                    source: await serverApi.getMediaUrl(song.songPath),
+                    artwork: null,
+                });
+            }
         }
+        _play();
+        serverApi.getImageUrl(song.artworkPath, setImage);
     }, [song._id]);
 
     useEffect(() => {
@@ -228,11 +234,17 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
 
         initSilence();
 
+        async function updateSong() {
+            const _song = await queueApi.getSong();
+            setSong(_song);
+        }
+        updateSong();
+
         //updateMetadata(song);
     }, [])
     return(
         <div className="audio-player" onClick={()=>{if(isMobile) setCenterContent('none')}} style={{bottom: isMobile?"77px":"10px"}}>
-            <img src={serverApi.getMediaUrl() + nextSong.artworkPath} style={{position:'absolute', height:'0px'}}></img>
+            <img src={image} style={{position:'absolute', height:'0px'}}></img>
             <motion.div 
                 className="player-details"
                 drag={isMobile? 'x' : null}
@@ -246,7 +258,7 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
                     }
                 }}
             >
-                <img src={serverApi.getImageUrl(song.artworkPath)} className="player-image" crossOrigin="anonymous"></img>
+                <img src={image} className="player-image" crossOrigin="anonymous"></img>
                 <div className="player-details-text">
                     <h3>{song.title}</h3>
                     <p>{song.artist}</p>

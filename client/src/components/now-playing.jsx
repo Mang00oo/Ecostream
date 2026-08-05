@@ -10,6 +10,7 @@ import { AiOutlineLoading } from "react-icons/ai";
 
 const NowPlaying = ({ song, isMobile, setCenterContent, onLibraryUpdated }) => {
       const [addState, setAddState] = useState('add');
+      const [image, setImage] = useState('');
       async function add() {
             if (addState === 'added') return;
             setAddState('adding')
@@ -19,10 +20,11 @@ const NowPlaying = ({ song, isMobile, setCenterContent, onLibraryUpdated }) => {
       }
       useEffect(()=> {
             setAddState('add');
+            serverApi.getImageUrl(song.artworkPath, setImage);
       }, [song.title])
       return (
             <Panel defaultSize={30} minSize={'12%'} className="panel" collapsible={true}>
-                  <img className="now-playing-image" src={serverApi.getImageUrl(song.artworkPath)} alt="Song cover" />
+                  <img className="now-playing-image" src={image} alt="Song cover" />
                   <h3> {song.title} </h3>
                   <p> {song.artist} </p>
                   {song.isCache &&

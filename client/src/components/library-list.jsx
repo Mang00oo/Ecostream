@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Panel } from "react-resizable-panels";
 import * as serverApi from '../apis/server-api';
+import * as offlineApi from '../apis/offline';
 import { FaPlus } from "react-icons/fa6";
 import * as ListItemCreator from './list-items';
 import { gsap } from "gsap";
 
-const LibraryList = ({currentData, centerContent, setData, refreshTrigger, editRef}) => {
+const LibraryList = ({currentData, centerContent, setData, refreshTrigger, editRef, isOnline}) => {
     const [libraryItems, setLibraryItems] = useState([]);
     const handleLibraryClick = (playlist) => {
         console.log('Clicked playlist: ' + playlist.name);
@@ -18,9 +19,16 @@ const LibraryList = ({currentData, centerContent, setData, refreshTrigger, editR
         }
     }
     const loadPlaylists = async () => {
-        const data = await serverApi.getLibrary();
-        setLibraryItems(data);
-        return data;
+        if (isOnline) {
+            const data = await serverApi.getLibrary();
+            setLibraryItems(data);
+            return data;
+        } else {
+            const data = await offlineApi.getLibrary();
+            setLibraryItems(data);
+            return data;
+        }
+        
     };
     useEffect(() => {
         async function update() {
