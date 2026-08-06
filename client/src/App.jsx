@@ -1,6 +1,7 @@
 import './App.css';
 import AudioPlayer from 'react-h5-audio-player';
 import * as serverApi from './apis/server-api';
+import * as queueApi from './apis/queue-api';
 import NowPlaying from './components/now-playing';
 import React, { useState, useEffect, useRef } from "react";
 import { Group } from "react-resizable-panels";
@@ -59,7 +60,7 @@ function App() {
   const searchResultsRef = useRef(null);
 
   const getNowPlaying = async() => {
-    const response = await serverApi.getNowPlaying();
+    const response = await queueApi.getSong();
     setNowPlaying(response);
   }
   useEffect(() => {

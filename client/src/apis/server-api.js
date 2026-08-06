@@ -6,17 +6,49 @@ import { BackgroundTask } from '@capawesome/capacitor-background-task';
 import * as nativeApi from './native-api';
 
 const SERVER_API_URL = 'http://100.90.153.39:8080/';
+axios.defaults.timeout = 3000;
 
-const socket = io(SERVER_API_URL);
-
+let socket = null;
 let currentUserId = 'none';
-let isOnline = true;
+let isOnline = null;
 
 let latency = 0;
 let clockOffset = 0;
+
+function getSocket() {
+    if (!socket) {
+        socket = io(SERVER_API_URL, {
+            autoConnect: false,
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionAttempts: Infinity,
+            timeout: 10000,
+        });
+        socket.on('connect_error', (error) => {
+            console.warn('Socket connect_error', error);
+        });
+        socket.on('error', (error) => {
+            console.warn('Socket error', error);
+        });
+    }
+    return socket;
+}
+
+function connectSocket() {
+    const sock = getSocket();
+    if (isOnline && !sock.connected && !sock.connecting) {
+        sock.connect();
+    }
+    return sock;
+}
+
 setInterval(()=> {
     const t0 = Date.now();
-    socket.emit('ntp_ping', {}, (serverTimestamps)=>{
+    const sock = getSocket();
+    if (!sock || !sock.connected) {
+        return;
+    }
+    sock.emit('ntp_ping', {}, (serverTimestamps)=>{
         const t3 = Date.now();
         const {t1, t2} = serverTimestamps;
         const networkRoundTrip = (t3 - t0) - (t2 - t1);
@@ -27,26 +59,36 @@ setInterval(()=> {
         } else {
             clockOffset = (clockOffset * 0.9) + (currentOffset * 0.1);
         }
-        
         latency = oneWayLatency / 1000;
     });
 }, 1000);
 export function setPlaybackOnAllClients(isPlaying, seekTime) {
-    socket.emit('togglePlay', { isPlaying: isPlaying, seekTime: seekTime + latency + 0.05, userID: currentUserId });
+    const sock = getSocket();
+    if (sock && sock.connected) {
+        sock.emit('togglePlay', { isPlaying: isPlaying, seekTime: seekTime + latency + 0.05, userID: currentUserId });
+    }
 }
 export function updateSongOnAllClients(song) {
-    socket.emit('updateSong', song);
+    const sock = getSocket();
+    if (sock && sock.connected) {
+        sock.emit('updateSong', song);
+    }
 }
 export function toggleDevicePlayback(id, isPlaying) {
-    socket.emit('setDevicePlaying', {id: id, isPlaying: isPlaying});
+    const sock = getSocket();
+    if (sock && sock.connected) {
+        sock.emit('setDevicePlaying', {id: id, isPlaying: isPlaying});
+    }
 }
 export function subscribeToUpdateSongEvent(callback) {
-    socket.on('updateSong', (song)=> {
+    const sock = getSocket();
+    sock.on('updateSong', (song)=> {
         callback(song);
-    })
+    });
 }
 export function subscribeToPlayEvent(callback) {
-    socket.on('togglePlay', async (data) => {
+    const sock = getSocket();
+    sock.on('togglePlay', async (data) => {
         if (data.userID == currentUserId) {
             if (nativeApi.getPlatform() == "Capacitor") {
                 if (!data.isPlaying) {
@@ -65,12 +107,14 @@ export function subscribeToPlayEvent(callback) {
     });
 }
 export function subscribeToDevicePlaybackEvent(callback) {
-    socket.on('setDevicePlayback', async (data) => {
+    const sock = getSocket();
+    sock.on('setDevicePlayback', async (data) => {
         await callback(data);
     });
 }
 export function subscribeToDeviceListUpdateEvent(callback) {
-    socket.on('updateDeviceList', async (data) => {
+    const sock = getSocket();
+    sock.on('updateDeviceList', async (data) => {
         await callback(data);
     });
 }
@@ -243,16 +287,34 @@ export function getApiUrl() {
     return SERVER_API_URL + 'api/'
 }
 export async function getIsOnline() {
+    if (isOnline != null) return isOnline;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        isOnline = false;
+        return false;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 1200);
     try {
-        const response = await axios.get(SERVER_API_URL);
-        if (response) {
-            isOnline = true
+        const response = await fetch(SERVER_API_URL, {
+            method: 'HEAD',
+            signal: controller.signal,
+            cache: 'no-store',
+        });
+        clearTimeout(timeoutId);
+        if (response.ok) {
+            isOnline = true;
+            connectSocket();
             return true;
         }
     } catch (error) {
         isOnline = false;
         return false;
+    } finally {
+        clearTimeout(timeoutId);
     }
+    isOnline = false;
+    return false;
 }
 export async function getImageUrl(image, setter) {
     if (!image) {return 'no image';}

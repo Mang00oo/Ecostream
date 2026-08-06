@@ -170,6 +170,7 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
         _play();
         serverApi.getImageUrl(song.artworkPath, setImage);
     }, [song._id]);
+    useEffect(()=> {updateMetadata(song)}, [image]);
 
     useEffect(() => {
         MediaSession.setActionHandler({action: 'pause'}, ()=> {togglePlayback(false); });

@@ -4,54 +4,51 @@ import * as serverApi from './server-api';
 import * as nativeApi from './native-api';
 import { Capacitor } from '@capacitor/core';
 
-async function downloadArtwork(artworkPath) {
+export async function isDownloaded(filePath) {
     try {
         await Filesystem.stat({
-            path: 'music/' + artworkPath,
+            path: 'music/' + filePath,
             directory: Directory.LibraryNoCloud,
         });
         return true;
     } catch (e) {
-        const fileInfo = await Filesystem.getUri({
-            directory: Directory.LibraryNoCloud,
-            path: 'music/' + artworkPath
+        return false;
+    }
+}
+async function downloadArtwork(artworkPath) {
+    if (await isDownloaded(artworkPath)) return true;
+    const fileInfo = await Filesystem.getUri({
+        directory: Directory.LibraryNoCloud,
+        path: 'music/' + artworkPath
+    });
+    try {
+        await FileTransfer.downloadFile({
+            url: await serverApi.getMediaUrl(artworkPath),
+            path: fileInfo.uri,
+            progress: true
         });
-        try {
-            await FileTransfer.downloadFile({
-                url: await serverApi.getMediaUrl(artworkPath),
-                path: fileInfo.uri,
-                progress: true
-            });
-            return true;
-        } catch(error) {
-            console.log(error);
-            return false;
-        }
+        return true;
+    } catch(error) {
+        console.log(error);
+        return false;
     }
 }
 async function downloadSongFile(songPath) {
+    if (await isDownloaded(songPath)) return true;
+    const fileInfo = await Filesystem.getUri({
+        directory: Directory.LibraryNoCloud,
+        path: 'music/' + songPath,
+    });
     try {
-        await Filesystem.stat({
-            path: 'music/' + songPath,
-            directory: Directory.LibraryNoCloud,
+        await FileTransfer.downloadFile({
+            url: await serverApi.getMediaUrl(songPath),
+            path: fileInfo.uri,
+            progress: true,
         });
-        return true;
-    } catch (e) {
-        const fileInfo = await Filesystem.getUri({
-            directory: Directory.LibraryNoCloud,
-            path: 'music/' + songPath,
-        });
-        try {
-            await FileTransfer.downloadFile({
-                url: await serverApi.getMediaUrl(songPath),
-                path: fileInfo.uri,
-                progress: true,
-            });
-            return true
-        } catch(error) {
-            console.log(error);
-            return false;
-        }
+        return true
+    } catch(error) {
+        console.log(error);
+        return false;
     }
 }
 
@@ -121,10 +118,10 @@ export async function getLibrary() {
             playlistArr.push(JSON.parse(contents.data));
         }
         console.log(playlistArr);
-        console.log(playlistArr[0].name);
+        console.log(playlistArr[0]?.name);
         return playlistArr;
     } catch (error) {
-        return false;
+        return [];
     }
 }
 export async function initializeOfflineUpdates() {

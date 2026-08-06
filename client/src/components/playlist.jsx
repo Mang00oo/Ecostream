@@ -3,6 +3,7 @@ import { Panel } from "react-resizable-panels";
 import * as serverApi from '../apis/server-api';
 import * as nativeApi from '../apis/native-api';
 import * as offlineApi from '../apis/offline';
+import * as queueApi from '../apis/queue-api';
 import { FaPlay, FaShuffle, FaTrash, FaDownload } from "react-icons/fa6";
 import { MdEdit } from "react-icons/md";
 import { HiMiniSparkles } from "react-icons/hi2";
@@ -15,7 +16,7 @@ const Playlist = ({data, playCallback, setCenterContent, editRef}) => {
     const [selectedShuffleOption, setSelectedShuffleOption] = useState('No Shuffle');
 
     const playSong = async (song) => {
-        const response = await serverApi.controlQueue('play', song._id);
+        const response = await queueApi.playSong(song._id);
         await playCallback(response);
     }
     const playPlaylist = async () => {

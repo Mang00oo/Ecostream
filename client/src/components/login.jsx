@@ -59,7 +59,10 @@ const Login = ({setSignedIn, signedInState, setOnline, onlineState}) => {
             const isOnline = await serverApi.getIsOnline();
             const isMobile = await nativeApi.getPlatform() == 'Capacitor';
             setOnline(isOnline);
-            if (!isOnline) return;
+            if (!isOnline) {
+                setSignedIn('true'); 
+                return;
+            }
             const result = await serverApi.checkLogin();
             if (result.userID != 'none') {
                 if (result.success == true) {
@@ -68,6 +71,9 @@ const Login = ({setSignedIn, signedInState, setOnline, onlineState}) => {
             }
         }
         async function updateUsers() {
+            const online = await serverApi.getIsOnline();
+            setOnline(online);
+            if (!online) return;
             const users = await serverApi.getUsers();
             setUsers(users);
         }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Panel } from "react-resizable-panels";
 import * as serverApi from '../apis/server-api';
+import * as queueApi from '../apis/queue-api';
 import { FaPlus, FaPlay, FaShuffle, FaAngleLeft } from "react-icons/fa6";
 import { HiMiniSparkles } from "react-icons/hi2";
 import * as ListItemCreator from './list-items';
@@ -11,12 +12,12 @@ const Queue = ({playCallback, reverseCenterContent, currentSong}) => {
     const containerRef = useRef(null);
 
     const playSong = async (song) => {
-        const response = await serverApi.controlQueue('play', song._id);
+        const response = await queueApi.playSong(song._id);
         playCallback(response);
     }
     async function updateNowPlaying() {
         if (!containerRef.current) return;
-        const currentIndex = await serverApi.getPosInQueue();
+        const currentIndex = await queueApi.getQueuePos();
         setPos(currentIndex);
         const currentLine = containerRef.current.children[currentIndex];
         if (currentLine) {
@@ -25,8 +26,8 @@ const Queue = ({playCallback, reverseCenterContent, currentSong}) => {
     }
     useEffect(()=> {
         const updateSongs = async() => {
-            const response = await serverApi.getQueue();
-            setSongs(response.queue);
+            const response = await queueApi.getQueue();
+            setSongs(response);
             updateNowPlaying();
         }
         updateSongs();
