@@ -27,6 +27,7 @@ let clickedSong = {};
 function App() {
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [actualSearchQuery, setActualSearchQuery] = useState('');
 
   const [centerContent, setCenterContent] = useState('none'); // 'search', 'playlist', 'queue'. 'none'
   const [lastCenterContent, setLastCenterContent] = useState('none');
@@ -118,6 +119,7 @@ function App() {
     setPlaylistPopupOpen(true);
   }
   async function search() {
+    setActualSearchQuery(searchQuery);
     setCenterContent('search');
     if (searchResultsRef.current?.performSearch) {
       await searchResultsRef.current.performSearch();
@@ -165,7 +167,7 @@ function App() {
         {(isSignedIn=='true' || !isOnline) &&
         <>
         <EditPlaylistPopup ref={editPlaylistRef} libraryReload={() => setLibraryReload((prev) => prev + 1)}/>
-        {!isMobile &&
+        {(!isMobile || centerContent=='search') &&
           <div className="top-bar">
             <form className="search-form" onSubmit={(e) => { e.preventDefault(); search(); }}>
               <input
@@ -191,7 +193,7 @@ function App() {
               <Playlist data={centerContententData} playCallback={playSong} setCenterContent={changeCenterContent} editRef={editPlaylistRef}></Playlist>
             )}
             {centerContent=='search' && (
-              <SearchResults searchQuery={searchQuery} ref={searchResultsRef} onLibraryUpdated={() => setLibraryReload((prev) => prev + 1)} setCenterContent={changeCenterContent}></SearchResults>
+              <SearchResults searchQuery={actualSearchQuery} ref={searchResultsRef} onLibraryUpdated={() => setLibraryReload((prev) => prev + 1)} setCenterContent={changeCenterContent}></SearchResults>
             )}
             {centerContent=='queue' && (
               <Queue playCallback={playSong} reverseCenterContent={reverseCenterContent} currentSong={nowPlaying}></Queue>
@@ -214,7 +216,7 @@ function App() {
               <Playlist data={centerContententData} playCallback={playSong} setCenterContent={changeCenterContent} editRef={editPlaylistRef}></Playlist>
             )}
             {centerContent=='search' && (
-              <SearchResults searchQuery={searchQuery} ref={searchResultsRef} onLibraryUpdated={() => setLibraryReload((prev) => prev + 1)} setCenterContent={changeCenterContent}></SearchResults>
+              <SearchResults searchQuery={actualSearchQuery} ref={searchResultsRef} onLibraryUpdated={() => setLibraryReload((prev) => prev + 1)} setCenterContent={changeCenterContent}></SearchResults>
             )}
             {centerContent=='queue' && (
               <Queue playCallback={playSong} setCenterContent={changeCenterContent} reverseCenterContent={reverseCenterContent} currentSong={nowPlaying}></Queue>

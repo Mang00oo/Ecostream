@@ -251,13 +251,13 @@ app.get('/api/control_queue', async (req, res) => {
                   let songToDownload = user.queue[user.posInQueue + 2]
                   downloadSong(songToDownload.artist, songToDownload.title, songToDownload.artworkPath, songToDownload.title, null, user._id, songToDownload._id);
             }
-            let next = user.posInQueue + 1;
+            let next = Math.min(user.posInQueue + 1, user.queue.length-1);
             if (!user.queue[next].songPath.endsWith('.mp3')) {
                   next++;
             }
             user.posInQueue = Math.min(next, user.queue.length - 1);
       } else if (action === 'prev') {
-            let prev = user.posInQueue - 1;
+            let prev = Math.max(user.posInQueue - 1, 0);
             if (!user.queue[prev].songPath.endsWith('.mp3')) {
                   prev--;
             }
@@ -288,7 +288,7 @@ app.get('/api/get_queue', async (req, res) => {
             res.status(404).send('User not found');
             return;
       }
-      res.send({ queue: user.queue, posInQueue: user.posInQueue });
+      res.send({ queue: user.queue, posInQueue: user.posInQueue, source: user.queueSource });
 });
 app.get('/api/get_queue_pos', async (req, res) => {
       const user = await User.findById(getCurrentUser(req));
@@ -420,20 +420,21 @@ app.get('/api/play_playlist', async (req, res) => {
 });
 app.get('/api/set_shuffle', async (req, res) => {
       const shuffleType = req.query.shuffleType;
+      const id = req.query.playlistId;
       const user = await User.findById(await getCurrentUser(req)).populate('queue').populate('queueSource').exec();
       if (!user) {
             res.status(404).send('User not found');
             return;
       }
-      if (user.queueSource && user.queueSource.Playlist) {
-            const playlist = await Playlist.findById(user.queueSource.Playlist).populate('songs').exec();
-            if (playlist) {
-                  let songsToPlay;
-                  const originalShuffleType = playlist.shuffle || 'No Shuffle';
-                  playlist.shuffle = shuffleType;
-                  await playlist.save();
+      const playlist = await Playlist.findById(id).populate('songs').exec();
+      if (playlist) {
+            let songsToPlay;
+            const originalShuffleType = playlist.shuffle || 'No Shuffle';
+            playlist.shuffle = shuffleType;
+            await playlist.save();
 
-                  if (originalShuffleType === 'No Shuffle' && shuffleType !== 'No Shuffle') { // Shuffle
+            if (user.queueSource.Playlist && user.queueSource.Playlist == playlist._id) {
+                if (originalShuffleType === 'No Shuffle' && shuffleType !== 'No Shuffle') { // Shuffle
                         songsToPlay = user.queue.slice(user.posInQueue+1);
                         songsToPlay = shuffleArray(songsToPlay);
                         user.queue = user.queue.slice(0, user.posInQueue+1).concat(songsToPlay);
@@ -450,13 +451,13 @@ app.get('/api/set_shuffle', async (req, res) => {
                         }
                         user.queue = playlist.songs.map(song => song._id);
                   }
+                  if (shuffleType === 'Smart Shuffle') {
+                        addSmartSuggestions(user._id);
+                  }
             }
       }
       await user.save();
       res.send('Shuffle set to ' + shuffleType);
-      if (shuffleType === 'Smart Shuffle') {
-            await addSmartSuggestions(user._id);
-      }
 });
 
 app.get('/api/get_now_playing', async (req, res) => {

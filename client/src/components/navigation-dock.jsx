@@ -7,7 +7,7 @@ const NavigationDock = ({ setCenterContent, setSignedIn }) => {
     return(
         <div className="navigation-dock">
             <button className="PlayButton" onClick={()=>{setCenterContent('library')}}><IoLibrary /></button>
-            <button className="PlayButton"><FaSearch /></button>
+            <button className="PlayButton" onClick={()=>{setCenterContent('search')}}><FaSearch /></button>
             <button className="PlayButton" onClick={()=>{setSignedIn('loggedOut')}}><FaUser /></button>
         </div>
     );

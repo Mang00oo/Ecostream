@@ -103,6 +103,22 @@ export async function getMediaUriFromPath(path) {
     });
     return Capacitor.convertFileSrc(fileInfo.uri);
 }
+
+export async function getImageBase64FromPath(path) {
+    const fileInfo = await Filesystem.readFile({
+        directory: Directory.LibraryNoCloud,
+        path: 'music/' + path
+    });
+
+    const ext = path.split('.').pop()?.toLowerCase();
+    let mime = 'image/jpeg';
+    if (ext === 'png') mime = 'image/png';
+    else if (ext === 'webp') mime = 'image/webp';
+    else if (ext === 'gif') mime = 'image/gif';
+
+    return `data:${mime};base64,${fileInfo.data}`;
+}
+
 export async function getLibrary() {
     var playlistArr = [];
     try {
@@ -122,6 +138,18 @@ export async function getLibrary() {
         return playlistArr;
     } catch (error) {
         return [];
+    }
+}
+export async function getPlaylistData(id) {
+    try {
+        const contents = await Filesystem.readFile({
+            path: 'playlists/'+id+'.txt',
+            directory: Directory.LibraryNoCloud,
+            encoding: Encoding.UTF8,
+        });
+        return JSON.parse(contents.data);
+    } catch {
+        return;
     }
 }
 export async function initializeOfflineUpdates() {

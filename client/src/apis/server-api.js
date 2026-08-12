@@ -229,8 +229,8 @@ export async function playPlaylist(playlistId, shuffleType) {
     const response = await axios.get(SERVER_API_URL + 'api/play_playlist', { params: { playlistId: playlistId, shuffleType: shuffleType }});
     return response.data;
 }
-export async function setShuffle(shuffleType) {
-    const response = await axios.get(SERVER_API_URL + 'api/set_shuffle', { params: { shuffleType: shuffleType } });
+export async function setShuffle(playlistId, shuffleType) {
+    const response = await axios.get(SERVER_API_URL + 'api/set_shuffle', { params: { shuffleType: shuffleType, playlistId: playlistId } });
     return response.data;
 }
 export async function getNowPlaying() {

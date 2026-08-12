@@ -22,22 +22,22 @@ const Playlist = ({data, playCallback, setCenterContent, editRef}) => {
     const playPlaylist = async () => {
         console.log(data._id)
         const shuffleType = selectedShuffleOption;
-        const response = await serverApi.playPlaylist(data._id, shuffleType);
-        console.log(response);
+        await queueApi.playPlaylist(data._id, shuffleType);
         await playCallback();
     }
     const onShuffleButtonPressed = async () => {
+        const isOnline = await serverApi.getIsOnline();
         if (selectedShuffleOption === 'Shuffle') { 
-            setSelectedShuffleOption('Smart Shuffle');
-            serverApi.setShuffle('Smart Shuffle');
+            setSelectedShuffleOption(isOnline? 'Smart Shuffle' : 'No Shuffle');
+            queueApi.setShuffle(data._id, isOnline? 'Smart Shuffle' : 'No Shuffle');
         }
         if (selectedShuffleOption === 'Smart Shuffle') { 
             setSelectedShuffleOption('No Shuffle');
-            serverApi.setShuffle('No Shuffle');
+            queueApi.setShuffle(data._id, 'No Shuffle');
         }
         if (selectedShuffleOption === 'No Shuffle') { 
             setSelectedShuffleOption('Shuffle');
-            serverApi.setShuffle('Shuffle');
+            queueApi.setShuffle(data._id, 'Shuffle');
         }
     }
     const getShuffleIcon = () => {
@@ -71,7 +71,16 @@ const Playlist = ({data, playCallback, setCenterContent, editRef}) => {
     }
     useEffect(()=> {
         setSongs(data.songs);
-        setSelectedShuffleOption(data.shuffle || 'No Shuffle');
+        async function setShuffle() {
+            const isOnline = await serverApi.getIsOnline();
+            if (isOnline) {
+                setSelectedShuffleOption(data.shuffle || 'No Shuffle');
+            } else {
+                setSelectedShuffleOption(data.shuffle == 'Smart Shuffle' ? 'Shuffle' : data.shuffle);
+            }
+            
+        }
+        setShuffle();
         if (data.artworkPath) {
             serverApi.getImageUrl(data.artworkPath, setImage);
         } else {
@@ -82,16 +91,20 @@ const Playlist = ({data, playCallback, setCenterContent, editRef}) => {
         <Panel defaultSize={40} minSize={'40%'} className="panel">
             <img className="playlist-image" src={image} alt="Playlist cover" />
             <div className="playlist-details">
-                <h3 onClick={editDetails} className="clickable" > {data.name} </h3>
+                <h3 onClick={editDetails} className="clickable"> {data.name} </h3>
+                
                 <p> {data.songs.length} songs </p>
                 <span>
                     <button className="PlayButton2" onClick={playPlaylist} style={{marginRight: 5}}> <FaPlay />‎ Play </button>
                     <button className="PlayButton2" onClick={editDetails} style={{marginRight: 5}}> <MdEdit /> </button>
                     <button className="PlayButton2" onClick={deletePlaylist} style={{marginRight: 5}}> <FaTrash /> </button>
-                    {nativeApi.getPlatform() === 'Capacitor' && <button className="PlayButton2" onClick={downloadPlaylist}> <FaDownload /> </button>}
                 </span>
                 
-                <button className="PlayButton2" onClick={onShuffleButtonPressed}> {getShuffleIcon()}‎ {selectedShuffleOption} </button>
+                <span>
+                    {nativeApi.getPlatform() === 'Capacitor' && <button className="PlayButton2" onClick={downloadPlaylist} style={{marginRight: 5}}> <FaDownload /> </button>}
+                    <button className="PlayButton2" onClick={onShuffleButtonPressed}> {getShuffleIcon()}‎ {selectedShuffleOption} </button>
+                </span>
+                
             </div>
             {songs.length > 0 ? songs.map((song) => <ListItemCreator.CreateSongItem key={song._id} song={song} playCallback={playSong} />) : <p> No songs in this playlist yet. Try adding some! </p>}
         </Panel>

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { AutoTextSize } from 'auto-text-size'
+import { AutoTextSize } from 'auto-text-size';
 import * as serverApi from '../apis/server-api';
 import { FaPlay, FaPlus, FaDownload } from "react-icons/fa6";
 import { BiEqualizer } from "react-icons/bi";

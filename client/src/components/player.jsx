@@ -3,14 +3,16 @@ import './AudioPlayer.css';
 import * as serverApi from '../apis/server-api';
 import * as nativeApi from '../apis/native-api';
 import * as queueApi from '../apis/queue-api';
+import * as offlineApi from '../apis/offline';
 import { NativeAudio } from '@capgo/capacitor-native-audio';
 import { MediaSession } from '@capgo/capacitor-media-session';
 import { FaPlay, FaPause, FaMicrophone } from 'react-icons/fa6';
 import { IoPlaySkipBack, IoPlaySkipForward } from "react-icons/io5";
 import { HiMiniQueueList } from "react-icons/hi2";
 import { MdConnectedTv } from "react-icons/md";
+import { AutoTextSize } from 'auto-text-size';
 import { AudioHeadless } from "audiotoolheadless";
-import { motion } from "motion/react"
+import { motion, useAnimate } from "motion/react";
 
 const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
     const [isPlaying, setIsPlaying] = useState(false);
@@ -21,16 +23,60 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
     const [image, setImage] = useState('');
     const playerRef = useRef(null);
     const seekbarRef = useRef(null);
+    const [scope, animate] = useAnimate();
 
-    function updateMetadata(_song) {
+    async function fetchImageBase64(url) {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        return await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    }
+
+    async function resolveArtworkSrc(src, artworkPath) {
+        if (!src && !artworkPath) return null;
+        if (src?.startsWith('data:')) return src;
+        if (src?.startsWith('http://') || src?.startsWith('https://')) return src;
+
+        if (src && (src.startsWith('capacitor://') || src.startsWith('file://'))) {
+            try {
+                return await fetchImageBase64(src);
+            } catch (error) {
+                console.warn('Failed to fetch local artwork URI, falling back to filesystem read', error);
+            }
+        }
+
+        if (artworkPath) {
+            try {
+                return await offlineApi.getImageBase64FromPath(artworkPath);
+            } catch (error) {
+                console.warn('Failed to convert offline artwork path to base64', error);
+            }
+        }
+
+        if (src) {
+            try {
+                return await fetchImageBase64(src);
+            } catch (error) {
+                console.warn('Failed to convert artwork to base64 for MediaSession', error);
+            }
+        }
+
+        return src || null;
+    }
+
+    async function updateMetadata(_song) {
+        const artworkSrc = await resolveArtworkSrc(image, _song.artworkPath);
         MediaSession.setMetadata({
             title: _song.title,
             artist: _song.artist,
-            artwork: [{
-                src: image,
+            artwork: artworkSrc ? [{
+                src: artworkSrc,
                 sizes: "300x300",
-                type: "image/jpeg",
-            }]
+            }] : undefined
         });
     }
 
@@ -248,20 +294,32 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
             <img src={image} style={{position:'absolute', height:'0px'}}></img>
             <motion.div 
                 className="player-details"
+                style={{width: isMobile? '85%' : '40%'}}
                 drag={isMobile? 'x' : null}
                 whileDrag={{scale: 0.7, opacity: 0.8}}
                 dragSnapToOrigin
-                onDragEnd={(event, info)=>{
+                onDragEnd={async (event, info)=>{
                     if (info.offset.x > 80) {
-                        prevSong();
+                        await animate(scope.current, {x: 500}, {duration: 0.1});
+                        await animate(scope.current, {x: -500}, {duration: 0.000001});
+                        await prevSong();
+                        await animate(scope.current, {x: 0}, {duration: 0.25})
                     } else if (info.offset.x < -80) {
-                        skipSong();
+                        await animate(scope.current, {x: -500}, {duration: 0.1});
+                        await animate(scope.current, {x: 500}, {duration: 0.000001});
+                        await skipSong();
+                        await animate(scope.current, {x: 0}, {duration: 0.25})
                     }
                 }}
+                ref={scope}
             >
                 <img src={image} className="player-image" crossOrigin="anonymous"></img>
                 <div className="player-details-text">
-                    <h3>{song.title}</h3>
+                    <div className="player-title">
+                        <AutoTextSize maxFontSizePx={30} mode="oneline" key={song.title}>
+                            {song.title}
+                        </AutoTextSize>
+                    </div>
                     <p>{song.artist}</p>
                 </div>
             </motion.div>
