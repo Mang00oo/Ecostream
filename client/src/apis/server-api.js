@@ -6,7 +6,6 @@ import { BackgroundTask } from '@capawesome/capacitor-background-task';
 import * as nativeApi from './native-api';
 
 const SERVER_API_URL = 'http://100.90.153.39:8080/';
-axios.defaults.timeout = 3000;
 
 let socket = null;
 let currentUserId = 'none';

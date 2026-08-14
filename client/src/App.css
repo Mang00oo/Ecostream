@@ -128,6 +128,7 @@ input::placeholder {
   background-color: rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(18px);
   overflow-y: scroll;
+  position: relative;
   perspective: 800px;
 }
 
@@ -372,9 +373,10 @@ span {
 
 .popup-content {
   margin: auto;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.2);
   border-radius: 10px;
-  width: 50%;
+  width: max(50%, 350px);
+  backdrop-filter: blur(15px);
   padding: 5px;
   color: white;
   text-align: center;

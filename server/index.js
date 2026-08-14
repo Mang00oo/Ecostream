@@ -610,8 +610,11 @@ const downloadSong = async (artist, title, artworkUrl, albumName, addToPlaylist,
       // Check type, if not song then loop through top_result.more for the first song
       const link = 'https://www.youtube.com/watch?v=' + topResult.videoId;
       const dl = await import('./apis/downloadSong.mjs');
-      const result = await dl.downloadSong(link, sanitizePath(title), sanitizePath(artist), path.join(__dirname, '../music/'));
-
+      var couldDownload = false;
+      while (!couldDownload) {
+            couldDownload = await dl.downloadSong(link, sanitizePath(title), sanitizePath(artist), path.join(__dirname, '../music/'));
+      }
+      
       // Save to MongoDB
       if (suggestionID) {
             let _song = await Song.findById(suggestionID);

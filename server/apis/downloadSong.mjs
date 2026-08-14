@@ -4,15 +4,23 @@ const ytdlp = new YtDlp();
 
 // Download a video with fluent API
 export async function downloadSong(url, title, artist, path) {
-  const result = await ytdlp
-  .download(url)
-  .audioFormat('mp3')
-  .extractAudio()
-  .on('progress', (p) => console.log(`${p.percentage_str}`))
-  .output(path)
-  .setOutputTemplate(`../music/${title}-${artist}.%(ext)s`)
-  .on('error', (err) => console.error(err))
-  .run();
+  try {
+    const result = await ytdlp
+      .download(url)
+      .audioFormat('mp3')
+      .extractAudio()
+      .on('progress', (p) => console.log(`${p.percentage_str}`))
+      .output(path)
+      .setOutputTemplate(`../music/${title}-${artist}.%(ext)s`)
+      .on('error', (err) => console.error(err))
+      .run();
+    if (result) {
+      return true;
+    }
+  } catch (e) {
+    return false;
+  }
+  
 
   console.log('Downloaded:', result.filePaths);
 }

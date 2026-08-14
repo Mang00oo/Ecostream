@@ -290,7 +290,7 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
         //updateMetadata(song);
     }, [])
     return(
-        <div className="audio-player" onClick={()=>{if(isMobile) setCenterContent('none')}} style={{bottom: isMobile?"77px":"10px"}}>
+        <div className="audio-player" onClick={()=>{if(isMobile) setCenterContent('none')}} style={{bottom: isMobile?"60px":"10px"}}>
             <img src={image} style={{position:'absolute', height:'0px'}}></img>
             <motion.div 
                 className="player-details"

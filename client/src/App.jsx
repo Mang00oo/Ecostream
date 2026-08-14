@@ -168,7 +168,7 @@ function App() {
         <>
         <EditPlaylistPopup ref={editPlaylistRef} libraryReload={() => setLibraryReload((prev) => prev + 1)}/>
         {(!isMobile || centerContent=='search') &&
-          <div className="top-bar">
+          <div className="top-bar" style={{marginTop: isMobile? '20px' : '5px'}}>
             <form className="search-form" onSubmit={(e) => { e.preventDefault(); search(); }}>
               <input
                 type="text"
@@ -182,7 +182,8 @@ function App() {
           </div>
         }
         {isMobile && 
-          <Group className="grid"> 
+          <>
+          <Group className="grid" style={{marginTop: centerContent!=='search'? '20px' : '5px'}}> 
             {centerContent=='none' &&
               <NowPlaying song={nowPlaying} setCenterContent={changeCenterContent} isMobile={isMobile} onLibraryUpdated={() => setLibraryReload((prev) => prev + 1)}></NowPlaying>
             }
@@ -193,7 +194,7 @@ function App() {
               <Playlist data={centerContententData} playCallback={playSong} setCenterContent={changeCenterContent} editRef={editPlaylistRef}></Playlist>
             )}
             {centerContent=='search' && (
-              <SearchResults searchQuery={actualSearchQuery} ref={searchResultsRef} onLibraryUpdated={() => setLibraryReload((prev) => prev + 1)} setCenterContent={changeCenterContent}></SearchResults>
+              <SearchResults searchQuery={actualSearchQuery} ref={searchResultsRef} onLibraryUpdated={() => setLibraryReload((prev) => prev + 1)} setCenterContent={changeCenterContent} isMobile={isMobile}></SearchResults>
             )}
             {centerContent=='queue' && (
               <Queue playCallback={playSong} reverseCenterContent={reverseCenterContent} currentSong={nowPlaying}></Queue>
@@ -206,6 +207,8 @@ function App() {
             )}
             
           </Group>
+          <NavigationDock setCenterContent={changeCenterContent} setSignedIn={setIsSignedIn}/>
+          </>
         }
 
         {!isMobile &&
@@ -216,7 +219,7 @@ function App() {
               <Playlist data={centerContententData} playCallback={playSong} setCenterContent={changeCenterContent} editRef={editPlaylistRef}></Playlist>
             )}
             {centerContent=='search' && (
-              <SearchResults searchQuery={actualSearchQuery} ref={searchResultsRef} onLibraryUpdated={() => setLibraryReload((prev) => prev + 1)} setCenterContent={changeCenterContent}></SearchResults>
+              <SearchResults searchQuery={actualSearchQuery} ref={searchResultsRef} onLibraryUpdated={() => setLibraryReload((prev) => prev + 1)} setCenterContent={changeCenterContent} isMobile={isMobile}></SearchResults>
             )}
             {centerContent=='queue' && (
               <Queue playCallback={playSong} setCenterContent={changeCenterContent} reverseCenterContent={reverseCenterContent} currentSong={nowPlaying}></Queue>
@@ -232,9 +235,6 @@ function App() {
           </Group>
         }
         <Player song={nowPlaying} setSong={setNowPlaying} setPosInSong={setPosInSong} setCenterContent={changeCenterContent} isMobile={isMobile}/>
-        {isMobile &&
-          <NavigationDock setCenterContent={changeCenterContent} setSignedIn={setIsSignedIn}/>
-        }
         </>
         }
         {isSignedIn!='true' && isOnline &&

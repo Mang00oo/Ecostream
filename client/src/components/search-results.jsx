@@ -8,7 +8,7 @@ import { IoClose } from "react-icons/io5";
 import * as lastfm from '../apis/last-fm';
 import AddToPlaylistPopup from './add-to-playlist-popup';
 
-const SearchResults = forwardRef(({searchQuery, onLibraryUpdated, setCenterContent}, ref) => {
+const SearchResults = forwardRef(({searchQuery, onLibraryUpdated, setCenterContent, isMobile}, ref) => {
     const [songs, setSongs] = useState([]);
     const [addSong, setAddSong] = useState({});
     const searchControllerRef = useRef(null);
@@ -79,12 +79,15 @@ const SearchResults = forwardRef(({searchQuery, onLibraryUpdated, setCenterConte
     };
 
     return(
-        <Panel defaultSize={40} minSize={'40%'} className="panel">
+        <>
+        <AddToPlaylistPopup song={addSong} setSong={setAddSong} refreshLibrary={onLibraryUpdated}></AddToPlaylistPopup>
+        <Panel defaultSize={40} minSize={'40%'} className="panel" style={{marginBottom: isMobile? '70px' : '0px'}}>
             <h2>Search Results</h2>
             <button className="CenterCloseButton" onClick={() => setCenterContent('none')}> <IoClose /> </button>
-            <AddToPlaylistPopup song={addSong} setSong={setAddSong} refreshLibrary={onLibraryUpdated}></AddToPlaylistPopup>
+            
             {songs.length == 0 ? <p>Search something...</p> :  songs.map((song, idx) => <ListItemCreator.CreateSongItem key={`${song.title}-${song.artist}-${idx}`} song={song} playCallback={addSongPlaylist} />)}
         </Panel>
+        </>
     )
 })
 export default SearchResults
