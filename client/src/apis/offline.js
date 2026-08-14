@@ -83,6 +83,7 @@ export async function checkForUpdates() {
 export async function downloadPlaylist(id) {
     const data = await serverApi.playlistData(id);
     const stringData = JSON.stringify(data);
+    localStorage.setItem("dl_" + id, true);
     await Filesystem.writeFile({
         path: 'playlists/'+id+'.txt',
         data: stringData,
@@ -94,6 +95,42 @@ export async function downloadPlaylist(id) {
     for (const song of data.songs) {
         await downloadSong(song);
     }
+    localStorage.removeItem("dl_"+id);
+    return true;
+}
+export async function deletePlaylist(id) {
+    const data = await getPlaylistData(id);
+    if (!data) return;
+    var filesToDelete = []
+    for (const song of data.songs) {
+        filesToDelete.push(song.songPath);
+        filesToDelete.push(song.artworkPath)
+    }
+    for (const playlist of await getLibrary()) {
+        if (playlist._id === id) continue;
+        for (const song of playlist.songs) {
+            const index = filesToDelete.indexOf(song.songPath);
+
+            if (index > -1) {
+                filesToDelete.splice(index, 1); 
+            }
+            const index2 = filesToDelete.indexOf(song.artworkPath);
+
+            if (index2 > -1) {
+                filesToDelete.splice(index2, 1); 
+            }
+        }
+    }
+    for (const file of filesToDelete) {
+        Filesystem.deleteFile({
+            path: 'music/'+file,
+            directory: Directory.LibraryNoCloud
+        });
+    }
+    Filesystem.deleteFile({
+        path: 'playlists/'+id+'.txt',
+        directory: Directory.LibraryNoCloud
+    });
     return true;
 }
 export async function getMediaUriFromPath(path) {
@@ -161,3 +198,4 @@ export async function initializeOfflineUpdates() {
         console.error(error);
     }
 }
+initializeOfflineUpdates();

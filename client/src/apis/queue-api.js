@@ -35,7 +35,7 @@ export function setQueueSource(id) {
 
 var queueInitialized = false;
 
-async function ensureQueueInitialized() {
+export async function ensureQueueInitialized() {
     console.log('Ensuring queue');
     if (queueInitialized) return;
 

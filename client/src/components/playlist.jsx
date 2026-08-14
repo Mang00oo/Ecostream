@@ -4,7 +4,8 @@ import * as serverApi from '../apis/server-api';
 import * as nativeApi from '../apis/native-api';
 import * as offlineApi from '../apis/offline';
 import * as queueApi from '../apis/queue-api';
-import { FaPlay, FaShuffle, FaTrash, FaDownload } from "react-icons/fa6";
+import { FaPlay, FaShuffle, FaTrash, FaDownload, FaCheck } from "react-icons/fa6";
+import { AiOutlineLoading } from "react-icons/ai";
 import { MdEdit } from "react-icons/md";
 import { HiMiniSparkles } from "react-icons/hi2";
 import { IoClose } from "react-icons/io5";
@@ -14,6 +15,7 @@ const Playlist = ({data, playCallback, setCenterContent, editRef}) => {
     const [songs, setSongs] = useState({});
     const [image, setImage] = useState('');
     const [selectedShuffleOption, setSelectedShuffleOption] = useState('No Shuffle');
+    const [downloadState, setDownloadState] = useState('no');
 
     const playSong = async (song) => {
         const response = await queueApi.playSong(song._id);
@@ -63,24 +65,39 @@ const Playlist = ({data, playCallback, setCenterContent, editRef}) => {
         }
     }
     async function downloadPlaylist() {
-        console.log('Beginning downloading JSON!');
-        const result = await offlineApi.downloadPlaylist(data._id);
-        if (result) {
-            console.log('Downloaded JSON successfully!');
+        if (downloadState === 'no') {
+            setDownloadState('work');
+            const result = await offlineApi.downloadPlaylist(data._id);
+            if (result) {
+                setDownloadState('yes');
+                await queueApi.ensureQueueInitialized();
+            }
+        }
+         if (downloadState === 'yes') {
+            setDownloadState('work');
+            const result = await offlineApi.deletePlaylist(data._id);
+            if (result) {
+                setDownloadState('no');
+            }
         }
     }
     useEffect(()=> {
         setSongs(data.songs);
-        async function setShuffle() {
+        async function init() {
             const isOnline = await serverApi.getIsOnline();
             if (isOnline) {
                 setSelectedShuffleOption(data.shuffle || 'No Shuffle');
             } else {
                 setSelectedShuffleOption(data.shuffle == 'Smart Shuffle' ? 'Shuffle' : data.shuffle);
             }
-            
+            const plData = await offlineApi.getPlaylistData(data._id);
+            if (plData) {
+                setDownloadState(localStorage.getItem('dl_'+data._id)? 'work' : 'yes');
+            } else {
+                setDownloadState('no');
+            }
         }
-        setShuffle();
+        init();
         if (data.artworkPath) {
             serverApi.getImageUrl(data.artworkPath, setImage);
         } else {
@@ -101,7 +118,17 @@ const Playlist = ({data, playCallback, setCenterContent, editRef}) => {
                 </span>
                 
                 <span>
-                    {nativeApi.getPlatform() === 'Capacitor' && <button className="PlayButton2" onClick={downloadPlaylist} style={{marginRight: 5}}> <FaDownload /> </button>}
+                    {nativeApi.getPlatform() === 'Capacitor' && <button className="PlayButton2" onClick={downloadPlaylist} style={{marginRight: 5}}>
+                        {downloadState === 'no' &&
+                            <FaDownload />
+                        }
+                        {downloadState === 'work' &&
+                            <AiOutlineLoading className="spinner-icon" />
+                        }
+                        {downloadState === 'yes' &&
+                            <FaCheck />
+                        }
+                    </button>}
                     <button className="PlayButton2" onClick={onShuffleButtonPressed}> {getShuffleIcon()}‎ {selectedShuffleOption} </button>
                 </span>
                 
