@@ -14,7 +14,7 @@ import { AutoTextSize } from 'auto-text-size';
 import { AudioHeadless } from "audiotoolheadless";
 import { motion, useAnimate } from "motion/react";
 
-const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
+const Player = ({song, setSong, setPosInSong, setCenterContent, centerContent, isMobile}) => {
     const [isPlaying, setIsPlaying] = useState(false);
     const [nextSong, setNextSong] = useState({});
     const [duration, setDuration] = useState(0);
@@ -292,45 +292,48 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
     return(
         <div className="audio-player" onClick={()=>{if(isMobile) setCenterContent('none')}} style={{bottom: isMobile?"60px":"10px"}}>
             <img src={image} style={{position:'absolute', height:'0px'}}></img>
-            <motion.div 
-                className="player-details"
-                style={{width: isMobile? '85%' : '40%'}}
-                drag={isMobile? 'x' : null}
-                whileDrag={{scale: 0.7, opacity: 0.8}}
-                dragSnapToOrigin
-                onDragEnd={async (event, info)=>{
-                    if (info.offset.x > 80) {
-                        await animate(scope.current, {x: 500}, {duration: 0.1});
-                        await animate(scope.current, {x: -500}, {duration: 0.000001});
-                        await prevSong();
-                        await animate(scope.current, {x: 0}, {duration: 0.25})
-                    } else if (info.offset.x < -80) {
-                        await animate(scope.current, {x: -500}, {duration: 0.1});
-                        await animate(scope.current, {x: 500}, {duration: 0.000001});
-                        await skipSong();
-                        await animate(scope.current, {x: 0}, {duration: 0.25})
-                    }
-                }}
-                ref={scope}
-            >
-                <img src={image} className="player-image" crossOrigin="anonymous"></img>
-                <div className="player-details-text">
-                    <div className="player-title">
-                        <AutoTextSize maxFontSizePx={30} mode="oneline" key={song.title}>
-                            {song.title}
-                        </AutoTextSize>
+            {!(isMobile && centerContent==='none') &&
+                <motion.div 
+                    className="player-details"
+                    style={{width: isMobile? '85%' : '40%'}}
+                    drag={isMobile? 'x' : null}
+                    whileDrag={{scale: 0.7, opacity: 0.8}}
+                    dragSnapToOrigin
+                    onDragEnd={async (event, info)=>{
+                        if (info.offset.x > 80) {
+                            await animate(scope.current, {x: 500}, {duration: 0.1});
+                            await animate(scope.current, {x: -500}, {duration: 0.000001});
+                            await prevSong();
+                            await animate(scope.current, {x: 0}, {duration: 0.25})
+                        } else if (info.offset.x < -80) {
+                            await animate(scope.current, {x: -500}, {duration: 0.1});
+                            await animate(scope.current, {x: 500}, {duration: 0.000001});
+                            await skipSong();
+                            await animate(scope.current, {x: 0}, {duration: 0.25})
+                        }
+                    }}
+                    ref={scope}
+                >
+                    <img src={image} className="player-image" crossOrigin="anonymous"></img>
+                    <div className="player-details-text">
+                        <div className="player-title">
+                            <AutoTextSize maxFontSizePx={30} mode="oneline" key={song.title}>
+                                {song.title}
+                            </AutoTextSize>
+                        </div>
+                        <p>{song.artist}</p>
                     </div>
-                    <p>{song.artist}</p>
-                </div>
-            </motion.div>
+                </motion.div>
+            }
+            
             
             <div className="player-controls">
-                <div className="player-buttons-container" style={isMobile? {position: 'absolute', top: '25px', right: '15px'} : {}}>
-                    {!isMobile &&
+                <div className="player-buttons-container" style={isMobile? (centerContent === 'none')? {gap: '15px'} : {position: 'absolute', top: '25px', right: '15px'} : {}}>
+                    {(!isMobile || (isMobile && centerContent==='none')) &&
                         <motion.button className="PlayButton" onClick={prevSong} whileHover={{ scale: 1.1 }} > <IoPlaySkipBack /> </motion.button>
                     }
-                    <motion.button className="PlayButton" onClick={()=>togglePlayback(!isPlaying)} whileHover={{ scale: 1.1 }} > {isPlaying ? <FaPause /> : <FaPlay />} </motion.button>
-                    {!isMobile &&
+                    <motion.button className="PlayButton" onClick={()=>togglePlayback(!isPlaying)} whileHover={{ scale: (isMobile && centerContent==='none')? 1.5 : 1.1 }} style={{scale: (isMobile && centerContent==='none')? 1.3 : 1}}> {isPlaying ? <FaPause /> : <FaPlay />} </motion.button>
+                    {(!isMobile || (isMobile && centerContent==='none')) &&
                         <motion.button className="PlayButton" onClick={skipSong} whileHover={{ scale: 1.1 }} > <IoPlaySkipForward /> </motion.button>
                     }
                     
@@ -361,7 +364,7 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, isMobile}) => {
                     }
                 </div>
             </div>
-            {!isMobile &&
+            {(!isMobile) &&
                 <div className="player-navigation-container">
                     <motion.button className="PlayButton" onClick={() => setCenterContent('queue')} whileHover={{ scale: 1.1 }}>
                             <HiMiniQueueList />

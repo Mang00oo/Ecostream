@@ -133,7 +133,7 @@ const Playlist = ({data, playCallback, setCenterContent, editRef}) => {
                 </span>
                 
             </div>
-            {songs.length > 0 ? songs.map((song) => <ListItemCreator.CreateSongItem key={song._id} song={song} playCallback={playSong} />) : <p> No songs in this playlist yet. Try adding some! </p>}
+            {songs.length > 0 ? songs.map((song) => <ListItemCreator.CreateSongItem key={song._id} song={song} playCallback={playSong} playlistID={data._id} reload={()=>{editRef.current?.libraryReload()}} />) : <p> No songs in this playlist yet. Try adding some! </p>}
         </Panel>
     )
 }

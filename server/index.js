@@ -1,5 +1,6 @@
 const express = require('express');
 const { createServer } = require("http");
+const cron = require('node-cron');
 const app = express();
 const path = require('path');
 const cors = require('cors');
@@ -225,16 +226,9 @@ app.get('/api/get_song', (req, res) => {
       res.send('http://localhost:8080/media/' + mbid + '.mp3');
 })
 app.get('/api/add_to_queue', async (req, res) => {
-      const user = await getCurrentUser(req);
-      const mbid = req.query.mbid;
-      const index = req.query.index;
-      console.log('Adding to queue: ' + mbid);
-      const song = await Song.findOne({ mbid: mbid });
-      if (!song) {
-            res.status(404).send('Song not found');
-            return;
-      }
-      await User.findByIdAndUpdate(user, { $push: { queue: song._id, }, queueSource: { Song: song.mbid } });
+      const user = await User.findById(await getCurrentUser(req));
+      const songId = req.query.songId;
+      await user.updateOne({ $push: { queue: {$each: [songId], $position: user.posInQueue + 1}, }});
       res.send('Added to queue');
 });
 app.get('/api/control_queue', async (req, res) => {
@@ -334,6 +328,10 @@ const clearCache = async () => {
       }
       console.log('Cache cleared');
 }
+cron.schedule('0 0 * * 0', () => { // Clear cache once a week
+    console.log('Clearing cache...');
+    clearCache();
+});
 
 const addSmartSuggestions = async (userID) => {
       const user = await User.findById(userID).populate('queue').exec();
@@ -547,6 +545,27 @@ app.get('/api/add_to_playlist', async (req, res) => {
       await playlist.save();
       res.send(true);
 });
+app.get('/api/remove_from_playlist', async (req, res) => {
+      const playlistId = req.query.playlistId;
+      const songId = req.query.songId;
+      const playlist = await Playlist.findById(playlistId).populate('songs').exec();
+      if (!playlist) { res.send(false); return; }
+
+      const songIndex = playlist.songs.findIndex(s => s._id.toString() === songId);
+      if (songIndex < 0) { res.send(false); return;}
+      console.log(songIndex);
+      playlist.songs.splice(songIndex, 1);
+      await playlist.save();
+      res.send(true);
+      const documents = await Playlist.find({
+            "songs._id": songId
+      });
+      if (documents.length === 0) {
+            const song = await Song.findById(songId);
+            song.isCache = true;
+            await song.save();
+      }
+});
 app.get('/api/get_devices', async (req, res) => {
       const list = userDevices[await getCurrentUser(req)];
       let devices = []
@@ -614,7 +633,7 @@ const downloadSong = async (artist, title, artworkUrl, albumName, addToPlaylist,
       while (!couldDownload) {
             couldDownload = await dl.downloadSong(link, sanitizePath(title), sanitizePath(artist), path.join(__dirname, '../music/'));
       }
-      
+
       // Save to MongoDB
       if (suggestionID) {
             let _song = await Song.findById(suggestionID);

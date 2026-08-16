@@ -23,7 +23,7 @@ const NowPlaying = ({ song, isMobile, setCenterContent, onLibraryUpdated }) => {
             serverApi.getImageUrl(song.artworkPath, setImage);
       }, [song.title])
       return (
-            <Panel defaultSize={30} minSize={'12%'} className="panel" collapsible={true}>
+            <Panel defaultSize={30} minSize={'12%'} className="panel" collapsible={true} style={{marginBottom: isMobile? '95px' : null}}>
                   <img className="now-playing-image" src={image} alt="Song cover" />
                   <h3> {song.title} </h3>
                   <p> {song.artist} </p>

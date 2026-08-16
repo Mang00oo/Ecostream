@@ -382,6 +382,19 @@ span {
   text-align: center;
   -webkit-animation: anvil 0.3s cubic-bezier(0.38, 0.1, 0.36, 0.9) forwards;
 }
+.popup-small-content {
+  justify-content: center;
+  display: grid;
+  margin: auto;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  width: max(10%, 150px);
+  backdrop-filter: blur(15px);
+  padding: 5px;
+  color: white;
+  text-align: center;
+  -webkit-animation: anvil 0.3s cubic-bezier(0.38, 0.1, 0.36, 0.9) forwards;
+}
 .Lyrics {
   width: 100%;
   text-align: center;

@@ -20,6 +20,7 @@
     "jsonwebtoken": "^9.0.3",
     "libmuse": "^0.1.2",
     "mongoose": "^9.3.2",
+    "node-cron": "^4.6.0",
     "socket.io": "^4.8.3",
     "timesync": "^1.0.11",
     "youtubei.js": "^17.0.1",

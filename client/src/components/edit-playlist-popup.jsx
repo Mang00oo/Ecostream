@@ -19,6 +19,9 @@ const EditPlaylistPopup = forwardRef((props, ref) => {
         async deletePlaylist(id) {
             await serverApi.deletePlaylist(id)
             props.libraryReload();
+        },
+        libraryReload() {
+            props.libraryReload();
         }
     }));
     async function update() {

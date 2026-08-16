@@ -1,10 +1,13 @@
 import axios from 'axios';
 import { AutoTextSize } from 'auto-text-size';
 import * as serverApi from '../apis/server-api';
-import { FaPlay, FaPlus, FaDownload } from "react-icons/fa6";
+import { FaPlay, FaPlus, FaDownload, FaMinus } from "react-icons/fa6";
 import { BiEqualizer } from "react-icons/bi";
 import { HiMiniSparkles } from "react-icons/hi2";
+import { BsThreeDots } from "react-icons/bs";
+import { PiQueueBold } from "react-icons/pi";
 import { gsap } from "gsap";
+import { Popup } from "reactjs-popup";
 import { useRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -51,13 +54,24 @@ export function CreateLibraryItem({ playlist, callback }) {
   )
 }
 
-export function CreateSongItem({ song, playCallback, isCurrent }) {
+export function CreateSongItem({ song, playCallback, isCurrent, playlistID, reload }) {
   const [image, setImage] = useState('');
+  const [popupOpen, setPopupOpen] = useState(false);
   function handleClick() {
     console.log(song);
     if (song.isSearch || song.songPath.endsWith('.mp3')) {
       playCallback(song);
     }
+  }
+  async function removeFromPlaylist() {
+    if (await serverApi.removeFromPlaylist(playlistID, song._id)) {
+      reload();
+      setPopupOpen(false);
+    }
+  }
+  function addToQueue() {
+    serverApi.addToQueue(song._id);
+    setPopupOpen(false);
   }
   useEffect(()=> {
     serverApi.getImageUrl(song.artworkPath, setImage);
@@ -74,6 +88,23 @@ export function CreateSongItem({ song, playCallback, isCurrent }) {
           <h4 className="ArtistName"> {song.artist} </h4>
         </div>
         <button className="PlayButton" onClick={handleClick}> {song.isSearch ? <FaPlus /> : isCurrent ? <BiEqualizer /> : song.songPath.endsWith('.mp3') ? <FaPlay /> : <FaDownload />} </button>
+        
+        {!song.isSearch &&
+        <Popup
+          className='popup-small'
+          trigger={<button className="PlayButton" style={{marginRight: '40px'}} onClick={()=>{setPopupOpen(true)}}> <BsThreeDots /> </button>}
+          open={popupOpen}
+          onClose={()=>{setPopupOpen(false)}}
+          position="left center"
+          closeOnDocumentClick
+          arrow={false}
+        >
+          {playlistID && <button className="PlayButton2" onClick={removeFromPlaylist}> <FaMinus /> ‎ Remove from playlist </button>}
+          <button className="PlayButton2" style={{marginBottom: '0px'}} onClick={addToQueue}> <PiQueueBold /> ‎ Add to queue </button>
+        </Popup>
+        }
+        
+        
       </motion.div>
     </AnimatePresence>
   );

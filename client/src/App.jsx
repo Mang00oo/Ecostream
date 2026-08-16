@@ -66,20 +66,6 @@ function App() {
   }
   useEffect(() => {
     nativeApi.init(window);
-    
-    const playEventCallback = async(isPlaying) => {
-      console.log('Received play event from server: ' + isPlaying);
-      console.log(player.current);
-      if (player.current) {
-        await getNowPlaying();
-        if (isPlaying) {
-          player.current.audio.current.play();
-        } else {
-          player.current.audio.current.pause();
-        }
-      }
-    }
-    nativeApi.subscribeToPlayEvent(playEventCallback);
 
     async function keepAwake() {
       if (await KeepAwake.isSupported.isSupported) {
@@ -97,6 +83,13 @@ function App() {
   useEffect(()=> {
     serverApi.getImageUrl(nowPlaying.artworkPath, setBackgroundImage)
   }, [nowPlaying._id]);
+  useEffect(()=> {
+    if (centerContent === 'none' && isMobile) {
+      document.documentElement.style.setProperty('--isMobile', '-90px');
+    } else {
+      document.documentElement.style.setProperty('--isMobile', '0px');
+    }
+  }, [isMobile, centerContent])
   const playSong = async (response) => {
     setUseAutoPlay(true);
     console.log(response);
@@ -234,7 +227,7 @@ function App() {
             <NowPlaying song={nowPlaying} setCenterContent={changeCenterContent} isMobile={isMobile} onLibraryUpdated={() => setLibraryReload((prev) => prev + 1)}></NowPlaying>
           </Group>
         }
-        <Player song={nowPlaying} setSong={setNowPlaying} setPosInSong={setPosInSong} setCenterContent={changeCenterContent} isMobile={isMobile}/>
+        <Player song={nowPlaying} setSong={setNowPlaying} setPosInSong={setPosInSong} setCenterContent={changeCenterContent} centerContent={centerContent} isMobile={isMobile} ref={player}/>
         </>
         }
         {isSignedIn!='true' && isOnline &&

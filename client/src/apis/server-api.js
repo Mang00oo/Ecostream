@@ -228,6 +228,10 @@ export async function playPlaylist(playlistId, shuffleType) {
     const response = await axios.get(SERVER_API_URL + 'api/play_playlist', { params: { playlistId: playlistId, shuffleType: shuffleType }});
     return response.data;
 }
+export async function removeFromPlaylist(playlistId, songId) {
+    const response = await axios.get(SERVER_API_URL + 'api/remove_from_playlist', { params: { playlistId: playlistId, songId: songId }});
+    return response.data;
+}
 export async function setShuffle(playlistId, shuffleType) {
     const response = await axios.get(SERVER_API_URL + 'api/set_shuffle', { params: { shuffleType: shuffleType, playlistId: playlistId } });
     return response.data;
@@ -242,6 +246,10 @@ export async function getNextPlaying() {
 }
 export async function getQueue() {
     const response = await axios.get(SERVER_API_URL + 'api/get_queue' );
+    return response.data;
+}
+export async function addToQueue(songId) {
+    const response = await axios.get(SERVER_API_URL + 'api/add_to_queue', {params: {songId: songId}} );
     return response.data;
 }
 export async function getPosInQueue() {
