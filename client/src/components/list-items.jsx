@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { AutoTextSize } from 'auto-text-size';
 import * as serverApi from '../apis/server-api';
+import * as queueApi from '../apis/queue-api';
 import { FaPlay, FaPlus, FaDownload, FaMinus } from "react-icons/fa6";
 import { BiEqualizer } from "react-icons/bi";
 import { HiMiniSparkles } from "react-icons/hi2";
@@ -70,7 +71,7 @@ export function CreateSongItem({ song, playCallback, isCurrent, playlistID, relo
     }
   }
   function addToQueue() {
-    serverApi.addToQueue(song._id);
+    queueApi.addToQueue(song);
     setPopupOpen(false);
   }
   useEffect(()=> {

@@ -169,6 +169,18 @@ export async function getQueue() {
         return queue;
     }
 }
+export async function addToQueue(song) {
+    await ensureQueueInitialized();
+    if (await serverApi.getIsOnline()) {
+        const response = await serverApi.addToQueue(song._id);
+        return response;
+    } else {
+        const modifiedQueue = queue;
+        modifiedQueue.splice(queuePos, 0, song);
+        setQueue(modifiedQueue);
+        return true;
+    }
+}
 export async function getQueuePos() {
     await ensureQueueInitialized();
     if (await serverApi.getIsOnline()) {

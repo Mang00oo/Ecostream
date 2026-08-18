@@ -10,6 +10,7 @@ import Playlist from './components/playlist';
 import SearchResults from './components/search-results';
 import Queue from './components/queue';
 import Lyrics from './components/lyrics';
+import Settings from './components/settings';
 import DeviceSelect from './components/device-select';
 import Login from './components/login';
 import Player from './components/player';
@@ -18,6 +19,7 @@ import EditPlaylistPopup from './components/edit-playlist-popup';
 import { KeepAwake } from '@capacitor-community/keep-awake';
 import * as nativeApi from './apis/native-api';
 import { FaSearch, FaUser } from "react-icons/fa";
+import { FaGear } from "react-icons/fa6";
 import { Toaster } from 'react-hot-toast';
 
 // npm start to run frontend
@@ -171,6 +173,7 @@ function App() {
               />
               <button><FaSearch /></button>
             </form>
+            <button className="PlayButton" onClick={()=>{changeCenterContent('settings')}} style={{marginRight: '10px'}}> <FaGear /> </button>
             <button className="PlayButton" onClick={()=>{setIsSignedIn('loggedOut')}}> <FaUser /> </button>
           </div>
         }
@@ -198,6 +201,9 @@ function App() {
             {centerContent=='devices' && (
               <DeviceSelect reverseCenterContent={reverseCenterContent}></DeviceSelect>
             )}
+            {centerContent=='settings' && (
+              <Settings reverseCenterContent={reverseCenterContent}></Settings>
+            )}
             
           </Group>
           <NavigationDock setCenterContent={changeCenterContent} setSignedIn={setIsSignedIn}/>
@@ -222,6 +228,9 @@ function App() {
             )}
             {centerContent=='devices' && (
               <DeviceSelect reverseCenterContent={reverseCenterContent}></DeviceSelect>
+            )}
+            {centerContent=='settings' && (
+              <Settings reverseCenterContent={reverseCenterContent}></Settings>
             )}
 
             <NowPlaying song={nowPlaying} setCenterContent={changeCenterContent} isMobile={isMobile} onLibraryUpdated={() => setLibraryReload((prev) => prev + 1)}></NowPlaying>

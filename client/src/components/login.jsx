@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from "react";
 import * as serverApi from "../apis/server-api";
 import * as nativeApi from "../apis/native-api";
-import toast from "react-hot-toast"
+import * as offlineApi from "../apis/offline";
+import toast from "react-hot-toast";
 
 const Login = ({setSignedIn, signedInState, setOnline, onlineState}) => {
     const [input, setInput] = useState('');
     const [user, setUser] = useState('');
+    const [serverUrl, setServerUrl] = useState('');
+    const [needsServer, setNeedsServer] = useState(true);
     const [users, setUsers] = useState([]);
     const [showLoginInput, setShowLoginInput] = useState(false);
     const [clickedUser, setClickedUser] = useState('');
@@ -14,7 +17,17 @@ const Login = ({setSignedIn, signedInState, setOnline, onlineState}) => {
         setInput(e.target.value);
     }
     async function onSubmit(e) {
-        if (showLoginInput) {
+        if (needsServer) {
+            localStorage.setItem('serverApiUrl', input);
+            serverApi.updateServerUrl();
+            const isOnline = await serverApi.getIsOnline();
+            if (isOnline) {
+                toast.success('Server found!');
+                setNeedsServer(false);
+            } else {
+                toast.error('Server not found.');
+            }
+        } else if (showLoginInput) {
             const result = await serverApi.loginAsUser(clickedUser, input);
             console.log(result);
             if (result.success) {
@@ -55,8 +68,25 @@ const Login = ({setSignedIn, signedInState, setOnline, onlineState}) => {
     }
     useEffect(() => {
         //localStorage.removeItem('token');
+        async function updateServerRequirement() {
+            const url = localStorage.getItem('serverApiUrl')
+            if (url) {
+                if (await offlineApi.hasDownloads()) {
+                    setNeedsServer(false);
+                } else {
+                    setNeedsServer(true);
+                }
+            } else {
+                setNeedsServer(true);
+            }
+            setServerUrl(url);
+        }
         async function login() {
+            await updateServerRequirement();
             const isOnline = await serverApi.getIsOnline();
+            console.log(isOnline);
+            console.log(needsServer);
+            if (!isOnline && needsServer) return;
             const isMobile = await nativeApi.getPlatform() == 'Capacitor';
             setOnline(isOnline);
             if (!isOnline) {
@@ -87,7 +117,16 @@ const Login = ({setSignedIn, signedInState, setOnline, onlineState}) => {
     }, []);
     return (
         <div className="center">
-            {user == 'none' &&
+            {needsServer &&
+                <>
+                    <h1>Server API URL</h1>
+                    <form className="search-form" onSubmit={(e) => { e.preventDefault(); onSubmit(e);}}>
+                        <input type="text" onChange={onChange} placeholder="http://xxx.xx.xxx.xx:yyyy/"></input>
+                        <button>Login</button>
+                    </form>
+                </>
+            }
+            {(!needsServer && user === 'none') &&
                 <>
                 <h1> Select Profile </h1>
                 {users.map((user, index) => 
@@ -101,7 +140,7 @@ const Login = ({setSignedIn, signedInState, setOnline, onlineState}) => {
                 }
                 </>
             }
-            {user == '' &&
+            {(!needsServer && user === '') &&
                 <>
                     <h1>Log In</h1>
                     <form className="search-form" onSubmit={(e) => { e.preventDefault(); onSubmit(e);}}>

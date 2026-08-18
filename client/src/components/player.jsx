@@ -178,7 +178,7 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, centerContent, i
         return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
     }
     function updateSeekbarGradient() {
-        if (!seekbarRef) return;
+        if (!seekbarRef.current) return;
         const newTime = seekbarRef.current.value;
         const min = parseInt(seekbarRef.current.min || 0);
         const max = parseInt(seekbarRef.current.max || 100);
@@ -317,7 +317,7 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, centerContent, i
                     <img src={image} className="player-image" crossOrigin="anonymous"></img>
                     <div className="player-details-text">
                         <div className="player-title">
-                            <AutoTextSize maxFontSizePx={30} mode="oneline" key={song.title}>
+                            <AutoTextSize maxFontSizePx={30} mode="oneline" key={song.title} style={{filter: 'drop-shadow(0px 2px 6px black)'}}>
                                 {song.title}
                             </AutoTextSize>
                         </div>

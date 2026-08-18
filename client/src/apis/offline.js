@@ -84,6 +84,10 @@ export async function downloadPlaylist(id) {
     const data = await serverApi.playlistData(id);
     const stringData = JSON.stringify(data);
     localStorage.setItem("dl_" + id, true);
+    await downloadArtwork(data.artworkPath);
+    for (const song of data.songs) {
+        await downloadSong(song);
+    }
     await Filesystem.writeFile({
         path: 'playlists/'+id+'.txt',
         data: stringData,
@@ -91,10 +95,6 @@ export async function downloadPlaylist(id) {
         encoding: Encoding.UTF8,
         recursive: true,
     });
-    await downloadArtwork(data.artworkPath);
-    for (const song of data.songs) {
-        await downloadSong(song);
-    }
     localStorage.removeItem("dl_"+id);
     return true;
 }
@@ -139,6 +139,21 @@ export async function getMediaUriFromPath(path) {
         path: 'music/' + path
     });
     return Capacitor.convertFileSrc(fileInfo.uri);
+}
+export async function hasDownloads() {
+    try {
+        const playlists = await Filesystem.readdir({
+            path: 'playlists',
+            directory: Directory.LibraryNoCloud
+        });
+        if (playlists.files.length > 0) {
+            return true;
+        } else {
+            return false;
+        }
+    } catch (error) {
+        return false;
+    }
 }
 
 export async function getImageBase64FromPath(path) {

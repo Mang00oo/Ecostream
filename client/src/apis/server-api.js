@@ -5,7 +5,11 @@ import { CapacitorHttp } from '@capacitor/core';
 import { BackgroundTask } from '@capawesome/capacitor-background-task';
 import * as nativeApi from './native-api';
 
-const SERVER_API_URL = 'http://100.90.153.39:8080/';
+let SERVER_API_URL = localStorage.getItem("serverApiUrl");
+export function updateServerUrl() {
+    SERVER_API_URL = localStorage.getItem("serverApiUrl");
+    isOnline = null;
+}
 
 let socket = null;
 let currentUserId = 'none';
@@ -303,13 +307,15 @@ export async function getIsOnline() {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 1200);
     try {
-        const response = await fetch(SERVER_API_URL, {
-            method: 'HEAD',
+        const serverUrl = new URL('network_test', SERVER_API_URL.endsWith('/') ? SERVER_API_URL : `${SERVER_API_URL}/`);
+        const response = await fetch(serverUrl, {
+            method: 'GET',
             signal: controller.signal,
             cache: 'no-store',
         });
         clearTimeout(timeoutId);
-        if (response.ok) {
+        const responseBody = await response.text();
+        if (response.ok && responseBody === 'Hello from Ecostream!') {
             isOnline = true;
             connectSocket();
             return true;

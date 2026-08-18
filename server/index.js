@@ -577,6 +577,9 @@ app.get('/api/get_devices', async (req, res) => {
 app.get('/', async (req, res) => {
       res.send(true);
 });
+app.get('/network_test', async (req, res) => {
+      res.send('Hello from Ecostream!');
+});
 
 let downloadQueue = [];
 let isDownloading = false;
