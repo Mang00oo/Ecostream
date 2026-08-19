@@ -1,7 +1,6 @@
 
-# Ecostream
+# ![App Icon](assets/icon_small.png) Ecostream
 
-![App Icon](assets/icon_small.png)
 > A self-hosted Spotify alternative with all the cool features like cross-device control and smart shuffle in one fresh, clean interface.
 
 ![Desktop App](assets/DesktopApp.png)
@@ -13,7 +12,7 @@
 - Offline downloads: listen to music when your server is unreachable or you just don't have access to the internet
 
 ### App Install
-> Download your respective app file from releases and install it like you would any other app!
+Download your respective app file from [releases](https://github.com/Mang00oo/Ecostream/releases) and install it like you would any other app!
 
 ### Server Install
 
