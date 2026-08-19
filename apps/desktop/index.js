@@ -9,14 +9,14 @@ const path = require('path')
 
 let mainWindow;
 
+app.setAppUserModelId("com.mang0o.Ecostream");
+if (require('electron-squirrel-startup')) app.quit();
+
 const createWindow = () => {
   mainWindow = new BrowserWindow({
     width: 1000,
     height: 600,
     title: "Ecostream",
-
-    
-
     frame: false,
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 20, y: 25 },
@@ -26,22 +26,28 @@ const createWindow = () => {
       preload: path.join(__dirname, 'preload.js'), // Link your preload script
     }
   })
-
   ipcMain.on('to-main', (event, data) => {
     console.log('Received in Main:', data);
     // Send a response back to React
     mainWindow.webContents.send('from-main', 'Message received by Main Process!');
   });
 
-  mainWindow.loadURL('http://100.90.153.39:3000')
-  mainWindow.setTouchBar(touchBar)
+  const isDev = !app.isPackaged; 
+
+  if (isDev) {
+    mainWindow.loadURL('http://localhost:3000'); 
+  } else {
+    mainWindow.loadFile(path.join(process.resourcesPath, 'build', 'index.html'));
+  }
+  mainWindow.setTouchBar(touchBar);
 
   mainWindow.on('close', function (event) {
-  if (!app.isQuitting) {
-    event.preventDefault();
-    mainWindow.hide();
-  }
-});
+    if (!app.isQuitting) {
+      event.preventDefault();
+      mainWindow.hide();
+    }
+  });
+  //mainWindow.webContents.addListener
 
 }
 
