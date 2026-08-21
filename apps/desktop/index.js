@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain, TouchBar, nativeImage } = require('electron/main')
 
-const { TouchBarLabel, TouchBarButton, TouchBarSpacer } = TouchBar
+const { TouchBarLabel, TouchBarButton, TouchBarSpacer, TouchBarSlider } = TouchBar
 
 const cp = require('child_process')
 const os = require('os')
@@ -9,8 +9,17 @@ const path = require('path')
 
 let mainWindow;
 
+let isPlaying = false;
+
 app.setAppUserModelId("com.mang0o.Ecostream");
 if (require('electron-squirrel-startup')) app.quit();
+
+const play = new TouchBarButton({
+  label: 'Play',
+  click: () => {
+      mainWindow.webContents.send('from-main', 'toggle-playback');
+  }
+});
 
 const createWindow = () => {
   mainWindow = new BrowserWindow({
@@ -27,9 +36,14 @@ const createWindow = () => {
     }
   })
   ipcMain.on('to-main', (event, data) => {
-    console.log('Received in Main:', data);
-    // Send a response back to React
-    mainWindow.webContents.send('from-main', 'Message received by Main Process!');
+    if (data.func === 'getDeviceName') {
+      const deviceName = getComputerName();
+      mainWindow.webContents.send('from-main', {deviceName: deviceName});
+    }
+    if (data.func === 'updatePlayback') {
+      isPlaying = data.isPlaying;
+      play.label = isPlaying? 'Pause' : 'Play'
+    }
   });
 
   const isDev = !app.isPackaged; 
@@ -47,8 +61,6 @@ const createWindow = () => {
       mainWindow.hide();
     }
   });
-  //mainWindow.webContents.addListener
-
 }
 
 function getComputerName() {
@@ -64,25 +76,29 @@ function getComputerName() {
       return os.hostname();
   }
 }
+/* 
 
-let isPlaying = false;
-const play = new TouchBarButton({
-  label: 'Play',
-  click: () => {
-    if (isPlaying) {
-      mainWindow.webContents.send('from-main', 'pause-event');
-      play.label = 'Play';
-    } else {
-        mainWindow.webContents.send('from-main', 'play-event');
-        play.label = 'Pause';
-    }
-    isPlaying = !isPlaying;
+new TouchBarSlider({
+  label: 'Seek',
+  minValue: 0,
+  maxValue: 100,
+  value: 0,
+  change: (newValue) => {
+    
   }
-})
+}),
+
+*/
 
 const touchBar = new TouchBar({
   items: [
+    new TouchBarSpacer({
+      size:'flexible'
+    }),
     play,
+    new TouchBarSpacer({
+      size:'flexible'
+    }),
   ]
 })
 
@@ -94,7 +110,13 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow()
     }
-  })
+  });
+  const iconPath = path.join(__dirname, '..', '..', 'assets/icon.png'); 
+  const image = nativeImage.createFromPath(iconPath);
+  
+  if (process.platform === 'darwin') {
+    app.dock.setIcon(image); // Forces macOS to update bundle representation
+  }
 })
 
 app.on('window-all-closed', () => {

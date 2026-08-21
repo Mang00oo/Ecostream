@@ -79,8 +79,16 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, centerContent, i
             }] : undefined
         });
     }
+    
+    const isPlayingRef = useRef(false);
+    useEffect(() => {
+        isPlayingRef.current = isPlaying;
+    }, [isPlaying]);
 
-    async function togglePlayback(target, isServer = false) {
+    async function togglePlayback(_target, isServer = false) {
+        const target = _target ?? !isPlayingRef.current;
+        console.log(target);
+        nativeApi.updateTouchbar(target);
         if (!target) {
             MediaSession.setPlaybackState({playbackState: 'paused'});
             await new Promise(resolve => setTimeout(resolve, 50));
@@ -223,6 +231,10 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, centerContent, i
         MediaSession.setActionHandler({action: 'play'}, ()=> {togglePlayback(true); });
         MediaSession.setActionHandler({action: 'nexttrack'}, ()=> {skipSong()});
         MediaSession.setActionHandler({action: 'previoustrack'}, ()=> {prevSong()});
+
+        nativeApi.subscribeToPlayEvent(() => {
+            togglePlayback();
+        });
         
         if (playerRef.current != null) return;
         const player = new AudioHeadless();

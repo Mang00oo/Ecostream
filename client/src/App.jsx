@@ -67,8 +67,6 @@ function App() {
     setNowPlaying(response);
   }
   useEffect(() => {
-    nativeApi.init(window);
-
     async function keepAwake() {
       if (await KeepAwake.isSupported.isSupported) {
         await KeepAwake.keepAwake();

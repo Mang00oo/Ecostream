@@ -17,7 +17,14 @@ let isOnline = null;
 
 let latency = 0;
 let clockOffset = 0;
-
+function waitForVariable(checkFn, callback, intervalTime = 100) {
+  var interval = setInterval(function() {
+    if (checkFn()) {
+      clearInterval(interval);
+      callback();
+    }
+  }, intervalTime);
+}
 function getSocket() {
     if (!socket) {
         socket = io(SERVER_API_URL, {
@@ -27,6 +34,18 @@ function getSocket() {
             reconnectionAttempts: Infinity,
             timeout: 10000,
         });
+        socket.on('connect', () => {
+            waitForVariable(
+                function() { return currentUserId !== 'none'; }, 
+                function() {
+                    console.log('getting Device name');
+                    nativeApi.getDeviceName().then(name => {
+                        socket.emit('setUser', {userID: currentUserId, deviceName: name, deviceType: nativeApi.getPlatform()});
+                    })
+                }
+            );
+        });
+        
         socket.on('connect_error', (error) => {
             console.warn('Socket connect_error', error);
         });
@@ -148,9 +167,6 @@ export async function checkLogin() {
             console.log(response.data.userID);
             localStorage.setItem('token', response.data.token);
             currentUserId = response.data.userID;
-            if (response.data.userID != 'none') {
-                socket.emit('setUser', {userID: currentUserId, deviceName: await nativeApi.getDeviceName(), deviceType: nativeApi.getPlatform()});
-            }
             isLoggingIn = false;
             return {success: true, userID: response.data.userID};
         } else {

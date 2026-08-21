@@ -10,12 +10,9 @@ export async function setQueue(_queue) {
     const oldQueuePos = queuePos;
     let removed = 0;
     for (const [index, song] of queue.entries()) {
-        console.log(song);
         if (await offlineApi.isDownloaded(song.songPath)) {
             downloadedQueue.push(song);
-            console.log('pushed');
         } else {
-            console.log('skipped');
             if (index <= oldQueuePos) {
                 removed ++;
             }
