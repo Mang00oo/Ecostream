@@ -1,0 +1,9 @@
+.users-container {
+    width: max(50vw, 350px);
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+.user-button {
+    display: inline-block;
+}

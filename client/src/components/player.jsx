@@ -200,11 +200,14 @@ const Player = ({song, setSong, setPosInSong, setCenterContent, centerContent, i
                 focus: true,
             });
         }
-        await NativeAudio.preload({
-            assetId: 'silence_token',
-            assetPath: 'silence.mp3',
-            isUrl: false
-        });
+        try {
+            await NativeAudio.preload({
+                assetId: 'silence_token',
+                assetPath: 'silence.mp3',
+                isUrl: false
+            });
+        } catch  {}
+        
         
         //await NativeAudio.play({ assetId: 'silence_token' });
     }

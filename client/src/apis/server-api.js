@@ -13,6 +13,7 @@ export function updateServerUrl() {
 
 let socket = null;
 let currentUserId = 'none';
+const isDemo = false;
 let isOnline = null;
 
 let latency = 0;
@@ -209,6 +210,26 @@ export async function loginAsUser(_id, pwd) {
     }
     return response.data;
 }
+export async function getUsername() {
+    const response = await axios.get(SERVER_API_URL + 'api/get_username');
+    return response.data;
+}
+export async function createUser(username) {
+    const response = await axios.get(SERVER_API_URL + 'api/create_user', { params: {username: username} });
+    return response.data;
+}
+export async function renameUser(username) {
+    const response = await axios.get(SERVER_API_URL + 'api/rename_user', { params: {username: username} });
+    return response.data;
+}
+export async function deleteUser() {
+    const response = await axios.get(SERVER_API_URL + 'api/delete_user');
+    return response.data;
+}
+export async function changePassword(password) {
+    const response = await axios.get(SERVER_API_URL + 'api/change_password', { params: {password: password} });
+    return response.data;
+}
 export async function getUsers() {
     const response = await axios.get(SERVER_API_URL + 'api/get_users');
     return response.data;
@@ -314,6 +335,10 @@ export function getApiUrl() {
     return SERVER_API_URL + 'api/'
 }
 export async function getIsOnline() {
+    if (isDemo) {
+        isOnline = true;
+        return true;
+    }
     if (isOnline != null) return isOnline;
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
         isOnline = false;

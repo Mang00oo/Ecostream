@@ -151,7 +151,7 @@ async function authenticateToken(req, res, next) {
     if (err) return res.status(403).json({ message: 'Invalid or expired token' });
     if (user.userID != 'none') {
       const dbUser = await User.findById(user.userID);
-      if (user.userID != 'none' && user.password != dbUser.password) {
+      if (user.userID != 'none' && dbUser.password && user.password != dbUser.password) {
             return res.status(403).json({ message: 'Invalid profile password' })
       }
     }
@@ -164,7 +164,7 @@ app.use('/api', authenticateToken); // Apply authentication middleware to all /a
 
 app.get('/api/get_users', async (req, res) => {
       const users = await User.find();
-      users.forEach(user => { if (user.password == '') {user.password = false} else {user.password = true} } );
+      users.forEach(user => { if (!user.password || user.password == '') {user.password = false} else {user.password = true} } );
       res.send(users);
 });
 app.get('/api/login_as_user', async (req, res) => {
@@ -172,7 +172,7 @@ app.get('/api/login_as_user', async (req, res) => {
       const pwd = req.query.password;
       const user = await User.findById(_id);
       if (user) {
-            if (user.password == pwd || (user.password || user.password=='' && pwd == '')) {
+            if (user.password == pwd || !user.password || user.password=='') {
                   const newToken = jwt.sign({ userID: _id, password: pwd }, process.env.PASSWORD, { expiresIn: '7d' });
                   res.send({ success: true, token: newToken, userID: _id, password: '' });
             } else {
@@ -220,6 +220,36 @@ function getCurrentUser(req) {
             return null;
       }
 }
+app.get('/api/create_user', async (req, res) => {
+      const name = req.query.username;
+      const user = await User.create({
+            username: name
+      });
+      res.send(true);
+});
+app.get('/api/get_username', async (req, res) => {
+      const user = await User.findById(getCurrentUser(req));
+      res.send(user.username);
+});
+app.get('/api/rename_user', async (req, res) => {
+      const user = await User.findById(getCurrentUser(req));
+      const newName = req.query.username;
+      user.username = newName;
+      await user.save();
+      res.send(true);
+});
+app.get('/api/delete_user', async (req, res) => {
+      const user = await User.findById(getCurrentUser(req));
+      await user.deleteOne();
+      res.send(true);
+});
+app.get('/api/change_password', async (req, res) => {
+      const user = await User.findById(getCurrentUser(req));
+      const newPass = req.query.password;
+      user.password = newPass;
+      await user.save();
+      res.send(true);
+});
 
 app.get('/api/get_song', (req, res) => {
       //const mbid = req.query.mbid;
