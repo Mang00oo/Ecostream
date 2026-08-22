@@ -28,7 +28,7 @@ export async function getDeviceName() {
     if (getPlatform() == 'Capacitor') {
         const info = await Device.getInfo();
         return info.name;
-    } else if (getPlatform() == 'Electron') {
+    } else if (electronAPI) {
         electronAPI.sendMessage({func: 'getDeviceName'})
         return new Promise((resolve, reject) => {
             electronAPI.onMessage((data) => {
@@ -51,5 +51,7 @@ export function subscribeToPlayEvent(callback) {
     }
 }
 export function updateTouchbar(isPlaying) {
-    electronAPI.sendMessage({func: 'updatePlayback', isPlaying: isPlaying});
+    if (electronAPI) {
+        electronAPI.sendMessage({func: 'updatePlayback', isPlaying: isPlaying});
+    }   
 }
